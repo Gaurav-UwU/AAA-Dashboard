@@ -1,0 +1,1656 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AAA Inflow-Outflow Dashboard — FY 25-26</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+  
+  :root {
+    --bg: #0a0e17;
+    --surface: #111827;
+    --surface2: #1a2236;
+    --border: #2a3450;
+    --text: #e2e8f0;
+    --text2: #94a3b8;
+    --accent: #38bdf8;
+    --accent2: #818cf8;
+    --green: #34d399;
+    --red: #f87171;
+    --orange: #fb923c;
+    --yellow: #fbbf24;
+    --pink: #f472b6;
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+  
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+
+  .app-header {
+    background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 20px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .app-header h1 {
+    font-size: 20px;
+    font-weight: 700;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .app-header .subtitle {
+    font-size: 12px;
+    color: var(--text2);
+    margin-top: 2px;
+  }
+
+  .tabs {
+    display: flex;
+    gap: 4px;
+    padding: 12px 32px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    overflow-x: auto;
+    flex-wrap: wrap;
+  }
+
+  .tab {
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--text2);
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+
+  .tab:hover { background: var(--surface2); color: var(--text); }
+  .tab.active { background: var(--accent); color: #0a0e17; border-color: var(--accent); font-weight: 600; }
+
+  .content { padding: 24px 32px; max-width: 1600px; margin: 0 auto; }
+
+  .upload-zone {
+    border: 2px dashed var(--border);
+    border-radius: 16px;
+    padding: 40px;
+    text-align: center;
+    background: var(--surface);
+    margin-bottom: 24px;
+    transition: all 0.3s;
+  }
+
+  .upload-zone:hover { border-color: var(--accent); }
+
+  .upload-zone h3 { font-size: 18px; margin-bottom: 8px; }
+  .upload-zone p { color: var(--text2); font-size: 14px; margin-bottom: 16px; }
+
+  .upload-row { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; }
+
+  .upload-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 24px;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    transition: all 0.2s;
+  }
+
+  .upload-btn.primary { background: var(--accent); color: #0a0e17; }
+  .upload-btn.primary:hover { background: #7dd3fc; }
+  .upload-btn.secondary { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+  .upload-btn.secondary:hover { border-color: var(--accent); }
+
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 24px; }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+  }
+
+  .card .label { font-size: 12px; color: var(--text2); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+  .card .value { font-size: 24px; font-weight: 700; font-family: 'JetBrains Mono', monospace; }
+  .card .sub { font-size: 12px; color: var(--text2); margin-top: 4px; }
+  .card .value.green { color: var(--green); }
+  .card .value.red { color: var(--red); }
+  .card .value.blue { color: var(--accent); }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    background: var(--surface);
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+  }
+
+  th {
+    background: var(--surface2);
+    padding: 12px 14px;
+    text-align: left;
+    font-weight: 600;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    color: var(--text2);
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    white-space: nowrap;
+  }
+
+  td {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+  }
+
+  tr:hover td { background: rgba(56, 189, 248, 0.05); }
+  tr:last-child td { border-bottom: none; }
+
+  .table-wrap {
+    overflow-x: auto;
+    border-radius: 12px;
+    margin-bottom: 24px;
+    max-height: 600px;
+    overflow-y: auto;
+  }
+
+  .section-title {
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .section-title .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+  }
+
+  .pos { color: var(--green); }
+  .neg { color: var(--red); }
+
+  textarea {
+    width: 100%;
+    min-height: 200px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    padding: 16px;
+    resize: vertical;
+    margin-bottom: 12px;
+  }
+
+  textarea:focus { outline: none; border-color: var(--accent); }
+
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+  @media (max-width: 900px) { .grid-2 { grid-template-columns: 1fr; } }
+
+  .badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+
+  .badge.pms { background: rgba(56,189,248,0.15); color: var(--accent); }
+  .badge.aif { background: rgba(129,140,248,0.15); color: var(--accent2); }
+
+  .bar-chart {
+    display: flex;
+    align-items: flex-end;
+    gap: 4px;
+    height: 120px;
+    padding: 8px 0;
+  }
+
+  .bar-col {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .bar {
+    width: 100%;
+    max-width: 40px;
+    border-radius: 4px 4px 0 0;
+    min-height: 2px;
+    transition: height 0.3s;
+  }
+
+  .bar-label {
+    font-size: 9px;
+    color: var(--text2);
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+    max-height: 50px;
+    overflow: hidden;
+  }
+
+  .legend {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--text2);
+  }
+
+  .legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 3px;
+  }
+
+  .status-bar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 16px;
+    background: rgba(52,211,153,0.1);
+    border: 1px solid rgba(52,211,153,0.2);
+    border-radius: 8px;
+    font-size: 13px;
+    color: var(--green);
+    margin-bottom: 24px;
+  }
+
+  .filter-row {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  select {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    padding: 8px 12px;
+    font-size: 13px;
+    font-family: 'DM Sans', sans-serif;
+  }
+
+  select:focus { outline: none; border-color: var(--accent); }
+
+  .hidden { display: none; }
+
+  input[type="file"] { display: none; }
+</style>
+</head>
+<body>
+
+<div class="app-header">
+  <div>
+    <h1>AAA Inflow-Outflow Dashboard</h1>
+    <div class="subtitle">FY 2025-26 Automation Tool</div>
+  </div>
+  <div style="font-size:12px;color:var(--text2)" id="dataStatus">No data loaded</div>
+</div>
+
+<div class="tabs" id="tabs">
+  <div class="tab active" data-tab="input">Data Input</div>
+  <div class="tab" data-tab="summary">Summary</div>
+  <div class="tab" data-tab="monthly">Monthly Trends</div>
+  <div class="tab" data-tab="distributors">Top Distributors</div>
+  <div class="tab" data-tab="city">City Analysis</div>
+  <div class="tab" data-tab="dist-scheme">Scheme × Distributor</div>
+  <div class="tab" data-tab="rm-scheme">Scheme × RM</div>
+  <div class="tab" data-tab="dist-perf">Dist Performance</div>
+  <div class="tab" data-tab="rm-perf">RM Performance</div>
+</div>
+
+<div class="content" id="content"></div>
+
+<script>
+// ─── GLOBALS ───
+let inflowData = [];
+let outflowData = [];
+let computed = null;
+let baseNormalizedInflow = [];
+let baseNormalizedOutflow = [];
+let allZones = [];
+let allSalesmen = [];
+let filters = { zone: 'All', salesman: 'All' };
+
+const SCHEMES = [
+  'AAA Budding Beasts Equity',
+  'AAA India Opportunity Plan Equity',
+  'AAA LIQUID PLAN',
+  'AAA India Equity Fund Scheme-1',
+  'AAA COUTURE',
+  'AAA SHARIAH',
+  'AAA Gems Fund'
+];
+
+const SCHEME_SHORT = {
+  'AAA Budding Beasts Equity': 'Budding Beasts',
+  'AAA India Opportunity Plan Equity': 'India Opp Plan',
+  'AAA LIQUID PLAN': 'Liquid Plan',
+  'AAA India Equity Fund Scheme-1': 'India Equity Fund',
+  'AAA COUTURE': 'Couture',
+  'AAA SHARIAH': 'Shariah',
+  'AAA Gems Fund': 'Gems Fund'
+};
+
+const MONTHS = ['Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec','Jan','Feb','Mar'];
+
+const SCHEME_CATEGORY = {
+  'AAA Budding Beasts Equity': 'depends',
+  'AAA India Opportunity Plan Equity': 'depends',
+  'AAA LIQUID PLAN': 'depends',
+  'AAA India Equity Fund Scheme-1': 'AIF',
+  'AAA COUTURE': 'depends',
+  'AAA SHARIAH': 'depends',
+  'AAA Gems Fund': 'AIF'
+};
+
+function getMonthIdx(dateStr) {
+  const d = new Date(dateStr);
+  const m = d.getMonth(); // 0-11
+  const y = d.getFullYear();
+  // FY: Apr(3)=0, May(4)=1, ... Mar(2)=11
+  if (m >= 3) return m - 3; // Apr=0 ... Dec=9
+  return m + 9; // Jan=10, Feb=11, Mar=12 -> wait Mar=11
+}
+
+function fmt(n, dec=2) {
+  if (n === 0) return '0.00';
+  if (Math.abs(n) < 0.001) return n.toFixed(4);
+  return n.toFixed(dec);
+}
+
+function fmtCr(n) {
+  return '₹' + fmt(n) + ' Cr';
+}
+
+function pct(n) {
+  return (n * 100).toFixed(1) + '%';
+}
+
+function naturalSort(a, b) {
+  return a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
+}
+
+// ─── PARSE CSV ───
+function parseCSV(text) {
+  // Strip BOM and weird whitespace
+  text = text.replace(/^\uFEFF/, '').replace(/^\u00EF\u00BB\u00BF/, '').trim();
+  
+  const result = Papa.parse(text, { header: true, skipEmptyLines: true, dynamicTyping: false });
+  
+  // Clean headers: trim, remove non-breaking spaces, normalize
+  return result.data.map(row => {
+    const clean = {};
+    for (const [k, v] of Object.entries(row)) {
+      const cleanKey = k.replace(/[\u00A0\u200B\uFEFF]/g, ' ').trim();
+      clean[cleanKey] = typeof v === 'string' ? v.trim() : v;
+    }
+    return clean;
+  });
+}
+
+function parseNum(val) {
+  if (val === null || val === undefined || val === '') return 0;
+  if (typeof val === 'number') return val;
+  // Remove commas, currency symbols, spaces
+  const cleaned = String(val).replace(/[,₹\s]/g, '').trim();
+  const n = parseFloat(cleaned);
+  return isNaN(n) ? 0 : n;
+}
+
+function findCol(row, patterns) {
+  // Find the first column key that matches any of the patterns
+  for (const k of Object.keys(row)) {
+    const kl = k.toLowerCase().replace(/[\s_\-]+/g, '');
+    for (const p of patterns) {
+      if (kl.includes(p)) return k;
+    }
+  }
+  return null;
+}
+
+function normalizeRow(row, type) {
+  // --- AMOUNT (try multiple strategies) ---
+  let amtCrs = 0;
+  
+  // Strategy 1: "Amt in Crs" column (most reliable, small number)
+  const crsCol = findCol(row, ['amtincr', 'crs', 'crore']);
+  if (crsCol) {
+    amtCrs = parseNum(row[crsCol]);
+  }
+  
+  // Strategy 2: "Inflow amount" / "Outflow amount" column
+  if (amtCrs === 0) {
+    const amtPatterns = type === 'inflow' ? ['inflowamount', 'infowamt'] : ['outflowamount', 'outfowamt'];
+    const amtCol = findCol(row, amtPatterns);
+    if (amtCol) {
+      amtCrs = parseNum(row[amtCol]) / 10000000;
+    }
+  }
+  
+  // Strategy 3: Try any column with "amount" in it
+  if (amtCrs === 0) {
+    const amtCol = findCol(row, ['amount']);
+    if (amtCol) {
+      amtCrs = parseNum(row[amtCol]) / 10000000;
+    }
+  }
+  
+  // --- SCHEME ---
+  let scheme = '';
+  const schemeCol = findCol(row, ['scheme']);
+  if (schemeCol) scheme = String(row[schemeCol] || '').trim();
+  
+  // --- CATEGORY (PMS/AIF) ---
+  let cat = '';
+  const catCol = findCol(row, ['pms/aif', 'pms', 'category', 'type']);
+  if (catCol) {
+    const val = String(row[catCol] || '').trim().toUpperCase();
+    if (val === 'PMS' || val === 'AIF') cat = val;
+  }
+  // If column name is "PMS/AIF", get the value directly
+  if (!cat) {
+    for (const k of Object.keys(row)) {
+      if (k.trim() === 'PMS/AIF' || k.trim().toLowerCase() === 'pms/aif') {
+        cat = String(row[k] || '').trim().toUpperCase();
+        break;
+      }
+    }
+  }
+  
+  // --- DISTRIBUTOR ---
+  let dist = '';
+  const distCol = findCol(row, ['nameofdistributor', 'distributor']);
+  if (distCol) {
+    // Make sure it's the distributor name column, not the RM column
+    const kl = distCol.toLowerCase();
+    if (!kl.includes('rm') || kl.includes('name of dist')) {
+      dist = String(row[distCol] || '').trim();
+    }
+  }
+  // Fallback: try exact column names
+  if (!dist) {
+    for (const k of Object.keys(row)) {
+      const kt = k.trim();
+      if (kt === 'Name of Distributor' || kt === 'Distributor') {
+        dist = String(row[k] || '').trim();
+        break;
+      }
+    }
+  }
+  
+  // --- AAA RM ---
+  let rm = '';
+  for (const k of Object.keys(row)) {
+    const kt = k.trim();
+    const kl = kt.toLowerCase().replace(/[\s_\-]+/g, '');
+    if (kl === 'aaarm' || kt === 'AAA RM' || kt === 'AAARM') {
+      rm = String(row[k] || '').trim();
+      break;
+    }
+  }
+  
+  // --- DISTRIBUTOR RM NAME (RM 1, RM 2, etc.) ---
+  let distRM = '';
+  for (const k of Object.keys(row)) {
+    const kl = k.toLowerCase();
+    if ((kl.includes('distributor') && kl.includes('rm')) || kl === 'distributor- rm name') {
+      distRM = String(row[k] || '').trim();
+      break;
+    }
+  }
+  
+  // --- CITY / LOCATION ---
+  let city = '';
+  const cityCol = findCol(row, ['location', 'city']);
+  if (cityCol) city = String(row[cityCol] || '').trim();
+
+  // --- ZONE ---
+  let zone = '';
+  for (const k of Object.keys(row)) {
+    if (k.trim().toLowerCase() === 'zone') {
+      zone = String(row[k] || '').trim();
+      break;
+    }
+  }
+
+  // --- SALESMAN (AAA Sales member) ---
+  let salesman = '';
+  for (const k of Object.keys(row)) {
+    const kt = k.trim().toLowerCase();
+    if (kt === 'aaa sales member' || kt === 'salesman' || kt === 'sales member' || kt === 'sales man' || kt.includes('sales member') || kt.includes('salesman')) {
+      salesman = String(row[k] || '').trim();
+      break;
+    }
+  }
+  
+  // --- DATE ---
+  let date = '';
+  const dateCol = findCol(row, ['date']);
+  if (dateCol) date = String(row[dateCol] || '').trim();
+  
+  // --- CLIENT ---
+  let clientCode = '', clientName = '';
+  const codeCol = findCol(row, ['clientcode', 'code']);
+  const nameCol = findCol(row, ['clientname']);
+  if (codeCol) clientCode = String(row[codeCol] || '').trim();
+  if (nameCol) clientName = String(row[nameCol] || '').trim();
+
+  return {
+    clientCode,
+    clientName,
+    date,
+    category: cat,
+    distributor: dist,
+    city,
+    zone,
+    salesman,
+    distRM,
+    aaaRM: rm,
+    scheme,
+    type,
+    amount: amtCrs * 10000000,
+    amtCrs
+  };
+}
+
+// ─── COMPUTE ALL ───
+function computeAll() {
+  if (inflowData.length === 0 && outflowData.length === 0) { computed = null; return; }
+
+  baseNormalizedInflow = inflowData.map(r => normalizeRow(r, 'inflow'));
+  baseNormalizedOutflow = outflowData.map(r => normalizeRow(r, 'outflow'));
+
+  // Build zone + salesman option lists from all data (before filtering)
+  const zoneSet = new Set(), smSet = new Set();
+  baseNormalizedInflow.concat(baseNormalizedOutflow).forEach(r => {
+    if (r.zone) zoneSet.add(r.zone);
+    if (r.salesman) smSet.add(r.salesman);
+  });
+  allZones = [...zoneSet].sort();
+  allSalesmen = [...smSet].sort();
+
+  aggregate();
+}
+
+function matchFilters(r) {
+  return (filters.zone === 'All' || r.zone === filters.zone) &&
+         (filters.salesman === 'All' || r.salesman === filters.salesman);
+}
+
+function aggregate() {
+  const allInflow = baseNormalizedInflow.filter(matchFilters);
+  const allOutflow = baseNormalizedOutflow.filter(matchFilters);
+  
+  // --- SUMMARY ---
+  const productSummary = {};
+  SCHEMES.forEach(s => { productSummary[s] = { inflow: 0, outflow: 0 }; });
+  
+  allInflow.forEach(r => {
+    if (productSummary[r.scheme]) productSummary[r.scheme].inflow += r.amtCrs;
+  });
+  allOutflow.forEach(r => {
+    if (productSummary[r.scheme]) productSummary[r.scheme].outflow += r.amtCrs;
+  });
+  
+  const categorySummary = { PMS: { inflow: 0, outflow: 0 }, AIF: { inflow: 0, outflow: 0 } };
+  allInflow.forEach(r => { if (categorySummary[r.category]) categorySummary[r.category].inflow += r.amtCrs; });
+  allOutflow.forEach(r => { if (categorySummary[r.category]) categorySummary[r.category].outflow += r.amtCrs; });
+  
+  // --- MONTHLY TRENDS ---
+  const monthlyByCategory = { PMS: { inflow: new Array(12).fill(0), outflow: new Array(12).fill(0) }, AIF: { inflow: new Array(12).fill(0), outflow: new Array(12).fill(0) } };
+  const monthlyByProduct = {};
+  SCHEMES.forEach(s => { monthlyByProduct[s] = { inflow: new Array(12).fill(0), outflow: new Array(12).fill(0) }; });
+  
+  allInflow.forEach(r => {
+    const mi = getMonthIdx(r.date);
+    if (mi >= 0 && mi < 12) {
+      if (monthlyByCategory[r.category]) monthlyByCategory[r.category].inflow[mi] += r.amtCrs;
+      if (monthlyByProduct[r.scheme]) monthlyByProduct[r.scheme].inflow[mi] += r.amtCrs;
+    }
+  });
+  allOutflow.forEach(r => {
+    const mi = getMonthIdx(r.date);
+    if (mi >= 0 && mi < 12) {
+      if (monthlyByCategory[r.category]) monthlyByCategory[r.category].outflow[mi] += r.amtCrs;
+      if (monthlyByProduct[r.scheme]) monthlyByProduct[r.scheme].outflow[mi] += r.amtCrs;
+    }
+  });
+  
+  // --- TOP DISTRIBUTORS ---
+  const distData = {};
+  allInflow.forEach(r => {
+    if (!r.distributor) return;
+    if (!distData[r.distributor]) distData[r.distributor] = { pmsIn: 0, aifIn: 0, totalIn: 0, totalOut: 0, byScheme: {}, txCount: 0 };
+    distData[r.distributor].totalIn += r.amtCrs;
+    distData[r.distributor].txCount++;
+    if (r.category === 'PMS') distData[r.distributor].pmsIn += r.amtCrs;
+    if (r.category === 'AIF') distData[r.distributor].aifIn += r.amtCrs;
+    if (!distData[r.distributor].byScheme[r.scheme]) distData[r.distributor].byScheme[r.scheme] = 0;
+    distData[r.distributor].byScheme[r.scheme] += r.amtCrs;
+  });
+  allOutflow.forEach(r => {
+    if (!r.distributor) return;
+    if (!distData[r.distributor]) distData[r.distributor] = { pmsIn: 0, aifIn: 0, totalIn: 0, totalOut: 0, byScheme: {}, txCount: 0 };
+    distData[r.distributor].totalOut += r.amtCrs;
+    distData[r.distributor].txCount++;
+  });
+  
+  // --- CITY ANALYSIS ---
+  const cityData = {};
+  allInflow.forEach(r => {
+    if (!r.city) return;
+    if (!cityData[r.city]) cityData[r.city] = { inflow: 0, outflow: 0, monthlyIn: new Array(12).fill(0), monthlyOut: new Array(12).fill(0) };
+    cityData[r.city].inflow += r.amtCrs;
+    const mi = getMonthIdx(r.date);
+    if (mi >= 0 && mi < 12) cityData[r.city].monthlyIn[mi] += r.amtCrs;
+  });
+  allOutflow.forEach(r => {
+    if (!r.city) return;
+    if (!cityData[r.city]) cityData[r.city] = { inflow: 0, outflow: 0, monthlyIn: new Array(12).fill(0), monthlyOut: new Array(12).fill(0) };
+    cityData[r.city].outflow += r.amtCrs;
+    const mi = getMonthIdx(r.date);
+    if (mi >= 0 && mi < 12) cityData[r.city].monthlyOut[mi] += r.amtCrs;
+  });
+  
+  // --- DISTRIBUTOR x SCHEME MONTHLY ---
+  const distSchemeMonthly = {};
+  allInflow.forEach(r => {
+    if (!r.distributor || !r.scheme) return;
+    const key = r.distributor;
+    if (!distSchemeMonthly[key]) distSchemeMonthly[key] = {};
+    if (!distSchemeMonthly[key][r.scheme]) distSchemeMonthly[key][r.scheme] = { inflow: new Array(12).fill(0), outflow: new Array(12).fill(0) };
+    const mi = getMonthIdx(r.date);
+    if (mi >= 0 && mi < 12) distSchemeMonthly[key][r.scheme].inflow[mi] += r.amtCrs;
+  });
+  allOutflow.forEach(r => {
+    if (!r.distributor || !r.scheme) return;
+    const key = r.distributor;
+    if (!distSchemeMonthly[key]) distSchemeMonthly[key] = {};
+    if (!distSchemeMonthly[key][r.scheme]) distSchemeMonthly[key][r.scheme] = { inflow: new Array(12).fill(0), outflow: new Array(12).fill(0) };
+    const mi = getMonthIdx(r.date);
+    if (mi >= 0 && mi < 12) distSchemeMonthly[key][r.scheme].outflow[mi] += r.amtCrs;
+  });
+  
+  // --- RM x SCHEME MONTHLY (uses Distributor-RM Name: RM 1, RM 2, etc.) ---
+  const rmSchemeMonthly = {};
+  allInflow.forEach(r => {
+    if (!r.distRM || !r.scheme) return;
+    const key = r.distRM;
+    if (!rmSchemeMonthly[key]) rmSchemeMonthly[key] = {};
+    if (!rmSchemeMonthly[key][r.scheme]) rmSchemeMonthly[key][r.scheme] = { inflow: new Array(12).fill(0), outflow: new Array(12).fill(0) };
+    const mi = getMonthIdx(r.date);
+    if (mi >= 0 && mi < 12) rmSchemeMonthly[key][r.scheme].inflow[mi] += r.amtCrs;
+  });
+  allOutflow.forEach(r => {
+    if (!r.distRM || !r.scheme) return;
+    const key = r.distRM;
+    if (!rmSchemeMonthly[key]) rmSchemeMonthly[key] = {};
+    if (!rmSchemeMonthly[key][r.scheme]) rmSchemeMonthly[key][r.scheme] = { inflow: new Array(12).fill(0), outflow: new Array(12).fill(0) };
+    const mi = getMonthIdx(r.date);
+    if (mi >= 0 && mi < 12) rmSchemeMonthly[key][r.scheme].outflow[mi] += r.amtCrs;
+  });
+  
+  // --- DIST PERFORMANCE (monthly) ---
+  const distPerf = {};
+  allInflow.forEach(r => {
+    if (!r.distributor) return;
+    if (!distPerf[r.distributor]) distPerf[r.distributor] = { totalIn: 0, totalOut: 0, monthlyIn: new Array(12).fill(0), monthlyOut: new Array(12).fill(0), txCount: 0 };
+    distPerf[r.distributor].totalIn += r.amtCrs;
+    distPerf[r.distributor].txCount++;
+    const mi = getMonthIdx(r.date);
+    if (mi >= 0 && mi < 12) distPerf[r.distributor].monthlyIn[mi] += r.amtCrs;
+  });
+  allOutflow.forEach(r => {
+    if (!r.distributor) return;
+    if (!distPerf[r.distributor]) distPerf[r.distributor] = { totalIn: 0, totalOut: 0, monthlyIn: new Array(12).fill(0), monthlyOut: new Array(12).fill(0), txCount: 0 };
+    distPerf[r.distributor].totalOut += r.amtCrs;
+    distPerf[r.distributor].txCount++;
+    const mi = getMonthIdx(r.date);
+    if (mi >= 0 && mi < 12) distPerf[r.distributor].monthlyOut[mi] += r.amtCrs;
+  });
+  
+  // --- RM PERFORMANCE (uses Distributor-RM Name: RM 1, RM 2, etc.) ---
+  const rmPerf = {};
+  allInflow.forEach(r => {
+    if (!r.distRM) return;
+    if (!rmPerf[r.distRM]) rmPerf[r.distRM] = { totalIn: 0, totalOut: 0, monthlyIn: new Array(12).fill(0), monthlyOut: new Array(12).fill(0) };
+    rmPerf[r.distRM].totalIn += r.amtCrs;
+    const mi = getMonthIdx(r.date);
+    if (mi >= 0 && mi < 12) rmPerf[r.distRM].monthlyIn[mi] += r.amtCrs;
+  });
+  allOutflow.forEach(r => {
+    if (!r.distRM) return;
+    if (!rmPerf[r.distRM]) rmPerf[r.distRM] = { totalIn: 0, totalOut: 0, monthlyIn: new Array(12).fill(0), monthlyOut: new Array(12).fill(0) };
+    rmPerf[r.distRM].totalOut += r.amtCrs;
+    const mi = getMonthIdx(r.date);
+    if (mi >= 0 && mi < 12) rmPerf[r.distRM].monthlyOut[mi] += r.amtCrs;
+  });
+  
+  computed = {
+    productSummary,
+    categorySummary,
+    monthlyByCategory,
+    monthlyByProduct,
+    distData,
+    cityData,
+    distSchemeMonthly,
+    rmSchemeMonthly,
+    rmPerf,
+    distPerf,
+    inflowCount: allInflow.length,
+    outflowCount: allOutflow.length,
+    totalInflow: allInflow.reduce((s,r) => s + r.amtCrs, 0),
+    totalOutflow: allOutflow.reduce((s,r) => s + r.amtCrs, 0)
+  };
+  
+  document.getElementById('dataStatus').textContent = `✓ ${allInflow.length} inflows, ${allOutflow.length} outflows loaded`;
+  document.getElementById('dataStatus').style.color = 'var(--green)';
+}
+
+// ─── FILTER BAR (Zone + Salesman) ───
+function renderFilterBar() {
+  if (!computed || (allZones.length === 0 && allSalesmen.length === 0)) return '';
+  const activeCount = (filters.zone !== 'All' ? 1 : 0) + (filters.salesman !== 'All' ? 1 : 0);
+  return `
+    <div class="filter-row" style="background:var(--surface);padding:12px 16px;border-radius:10px;border:1px solid var(--border);margin-bottom:20px">
+      <span style="font-size:12px;color:var(--text2);text-transform:uppercase;letter-spacing:0.5px;font-weight:600">Filters:</span>
+      <label style="font-size:13px;color:var(--text2);margin-left:8px">Zone:</label>
+      <select onchange="setFilter('zone', this.value)">
+        <option value="All">All Zones</option>
+        ${allZones.map(z => `<option value="${z}" ${filters.zone===z?'selected':''}>${z}</option>`).join('')}
+      </select>
+      <label style="font-size:13px;color:var(--text2);margin-left:12px">Salesman:</label>
+      <select onchange="setFilter('salesman', this.value)">
+        <option value="All">All Salesmen</option>
+        ${allSalesmen.map(s => `<option value="${s}" ${filters.salesman===s?'selected':''}>${s}</option>`).join('')}
+      </select>
+      ${activeCount > 0 ? `<button class="upload-btn secondary" style="padding:6px 12px;font-size:12px;margin-left:12px" onclick="clearFilters()">Clear (${activeCount})</button>
+      <span style="font-size:12px;color:var(--green);margin-left:8px">✓ ${computed.inflowCount} inflows · ${computed.outflowCount} outflows after filter</span>` : ''}
+    </div>
+  `;
+}
+
+function setFilter(key, val) {
+  filters[key] = val;
+  aggregate();
+  render();
+}
+
+function clearFilters() {
+  filters = { zone: 'All', salesman: 'All' };
+  aggregate();
+  render();
+}
+
+// ─── RENDER TABS ───
+let currentTab = 'input';
+
+document.getElementById('tabs').addEventListener('click', e => {
+  const tab = e.target.closest('.tab');
+  if (!tab) return;
+  currentTab = tab.dataset.tab;
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  tab.classList.add('active');
+  render();
+});
+
+function render() {
+  const c = document.getElementById('content');
+  
+  if (currentTab === 'input') renderInput(c);
+  else if (!computed) { c.innerHTML = '<div style="text-align:center;padding:60px;color:var(--text2)"><p style="font-size:18px;margin-bottom:8px">No data loaded</p><p>Go to Data Input tab to paste or upload your Inflow/Outflow data</p></div>'; return; }
+  
+  if (currentTab === 'summary') renderSummary(c);
+  else if (currentTab === 'monthly') renderMonthly(c);
+  else if (currentTab === 'distributors') renderDistributors(c);
+  else if (currentTab === 'city') renderCity(c);
+  else if (currentTab === 'dist-scheme') renderDistScheme(c);
+  else if (currentTab === 'rm-scheme') renderRMScheme(c);
+  else if (currentTab === 'dist-perf') renderDistPerf(c);
+  else if (currentTab === 'rm-perf') renderRMPerf(c);
+}
+
+// ─── INPUT TAB ───
+function renderInput(c) {
+  c.innerHTML = `
+    <div class="upload-zone">
+      <h3>Upload or Paste Transaction Data</h3>
+      <p>Upload the original XLSX file (auto-reads "Net Inflow" & "Net Outflow" sheets) or paste CSV data.</p>
+      <div class="upload-row">
+        <label class="upload-btn primary" for="xlsxFile" style="background:var(--accent2)">⬆ Upload XLSX (both sheets)</label>
+        <input type="file" id="xlsxFile" accept=".xlsx,.xls,.xlsm">
+      </div>
+      <p style="margin-top:16px;color:var(--text2);font-size:12px">— or upload CSV files separately —</p>
+      <div class="upload-row" style="margin-top:8px">
+        <label class="upload-btn secondary" for="inflowFile">Inflow CSV</label>
+        <input type="file" id="inflowFile" accept=".csv,.tsv,.txt">
+        <label class="upload-btn secondary" for="outflowFile">Outflow CSV</label>
+        <input type="file" id="outflowFile" accept=".csv,.tsv,.txt">
+        <button class="upload-btn secondary" onclick="loadSampleData()">Load Sample</button>
+      </div>
+    </div>
+    
+    <div class="grid-2">
+      <div>
+        <div class="section-title"><div class="dot" style="background:var(--green)"></div> Net Inflow Data (paste CSV)</div>
+        <textarea id="inflowText" placeholder="Client Code,Client Name,Date,PMS/AIF,Name of Distributor,Location,Distributor- RM Name,AAA RM,SCHEMENAME,Transaction,Inflow amount,Amt in Crs&#10;Code 1,Client 1,2025-04-01,PMS,D1,Pune,RM 1,GA-SB,AAA Budding Beasts Equity,Inflow,3000000,0.3">${inflowData.length > 0 ? '(' + inflowData.length + ' rows loaded)' : ''}</textarea>
+      </div>
+      <div>
+        <div class="section-title"><div class="dot" style="background:var(--red)"></div> Net Outflow Data (paste CSV)</div>
+        <textarea id="outflowText" placeholder="Client Code,Client Name,Date,PMS/AIF,Name of Distributor,Location,Distributor- RM Name,AAARM,SCHEMENAME,Transaction,Outflow amount,Amt in Crs&#10;Client 1111,Client 1111,2025-04-02,PMS,D24,Mumbai,RM 110,SB,AAA Budding Beasts Equity,Outflow,1500000,0.15">${outflowData.length > 0 ? '(' + outflowData.length + ' rows loaded)' : ''}</textarea>
+      </div>
+    </div>
+    
+    <div style="text-align:center;margin-top:16px">
+      <button class="upload-btn primary" style="padding:14px 48px;font-size:16px" onclick="processData()">⚡ Process & Generate All Reports</button>
+    </div>
+    
+    ${computed ? `<div class="status-bar" style="margin-top:24px">✓ Data processed successfully — ${computed.inflowCount} inflows (${fmtCr(computed.totalInflow)}) and ${computed.outflowCount} outflows (${fmtCr(computed.totalOutflow)}). Switch tabs to view reports.</div>
+    <div class="section-title" style="margin-top:8px"><div class="dot" style="background:var(--orange)"></div> Debug: First 5 Parsed Inflow Rows</div>
+    <div class="table-wrap"><table><thead><tr><th>Date</th><th>PMS/AIF</th><th>Distributor</th><th>City</th><th>Dist RM</th><th>AAA RM</th><th>Scheme</th><th>Amt (₹ Crs)</th></tr></thead><tbody>
+    ${inflowData.slice(0,5).map(r => {
+      const n = normalizeRow(r, 'inflow');
+      return '<tr><td>'+n.date+'</td><td>'+n.category+'</td><td>'+n.distributor+'</td><td>'+n.city+'</td><td>'+n.distRM+'</td><td>'+n.aaaRM+'</td><td style="font-family:DM Sans;font-size:11px">'+n.scheme+'</td><td class="pos">'+fmt(n.amtCrs)+'</td></tr>';
+    }).join('')}
+    </tbody></table></div>
+    <div class="section-title" style="margin-top:16px"><div class="dot" style="background:var(--orange)"></div> Debug: Raw Column Names (Inflow)</div>
+    <div style="background:var(--surface2);border-radius:8px;padding:12px;font-family:'JetBrains Mono';font-size:11px;color:var(--text2);word-break:break-all;margin-bottom:16px">
+    ${inflowData.length > 0 ? Object.keys(inflowData[0]).map(k => '"'+k+'"').join(' | ') : 'No data'}
+    </div>
+    <div class="section-title"><div class="dot" style="background:var(--orange)"></div> Debug: Raw Column Names (Outflow)</div>
+    <div style="background:var(--surface2);border-radius:8px;padding:12px;font-family:'JetBrains Mono';font-size:11px;color:var(--text2);word-break:break-all">
+    ${outflowData.length > 0 ? Object.keys(outflowData[0]).map(k => '"'+k+'"').join(' | ') : 'No data'}
+    </div>` : ''}
+  `;
+  
+  document.getElementById('xlsxFile').addEventListener('change', e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      try {
+        const data = new Uint8Array(ev.target.result);
+        const wb = XLSX.read(data, { type: 'array', cellDates: true });
+        
+        // Find inflow sheet
+        const inflowSheet = wb.SheetNames.find(n => n.toLowerCase().includes('inflow')) || wb.SheetNames[0];
+        const outflowSheet = wb.SheetNames.find(n => n.toLowerCase().includes('outflow')) || wb.SheetNames[1];
+        
+        if (inflowSheet) {
+          inflowData = XLSX.utils.sheet_to_json(wb.Sheets[inflowSheet], { defval: '' });
+          // Convert dates to strings
+          inflowData = inflowData.map(row => {
+            const clean = {};
+            for (const [k, v] of Object.entries(row)) {
+              if (v instanceof Date) {
+                clean[k.trim()] = v.toISOString().split('T')[0];
+              } else {
+                clean[k.trim()] = v;
+              }
+            }
+            return clean;
+          });
+        }
+        
+        if (outflowSheet && outflowSheet !== inflowSheet) {
+          outflowData = XLSX.utils.sheet_to_json(wb.Sheets[outflowSheet], { defval: '' });
+          outflowData = outflowData.map(row => {
+            const clean = {};
+            for (const [k, v] of Object.entries(row)) {
+              if (v instanceof Date) {
+                clean[k.trim()] = v.toISOString().split('T')[0];
+              } else {
+                clean[k.trim()] = v;
+              }
+            }
+            return clean;
+          });
+        }
+        
+        computeAll();
+        render();
+      } catch(err) {
+        alert('Error reading XLSX: ' + err.message);
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  });
+  
+  document.getElementById('inflowFile').addEventListener('change', e => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = ev => {
+        inflowData = parseCSV(ev.target.result);
+        document.getElementById('inflowText').value = '(' + inflowData.length + ' rows loaded from ' + file.name + ')';
+      };
+      reader.readAsText(file);
+    }
+  });
+  
+  document.getElementById('outflowFile').addEventListener('change', e => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = ev => {
+        outflowData = parseCSV(ev.target.result);
+        document.getElementById('outflowText').value = '(' + outflowData.length + ' rows loaded from ' + file.name + ')';
+      };
+      reader.readAsText(file);
+    }
+  });
+}
+
+function processData() {
+  const it = document.getElementById('inflowText').value;
+  const ot = document.getElementById('outflowText').value;
+  
+  if (it && !it.startsWith('(')) inflowData = parseCSV(it);
+  if (ot && !ot.startsWith('(')) outflowData = parseCSV(ot);
+  
+  computeAll();
+  render();
+}
+
+function loadSampleData() {
+  // Generate sample inflow data
+  const sampleInflow = `Client Code,Client Name,Date,PMS/AIF,Name of Distributor,Location,Distributor- RM Name,AAA RM,SCHEMENAME,Transaction,Inflow amount,Amt in Crs
+Code 1,Client 1,2025-04-01,PMS,D1,Pune,RM 1,GA-SB,AAA Budding Beasts Equity,Inflow,3000000,0.3
+Code 2,Client 2,2025-04-01,PMS,D2,Bangalore,RM 2,RK-SB,AAA India Opportunity Plan Equity,Inflow,1000000,0.1
+Code 3,Client 3,2025-04-01,PMS,D2,Bangalore,RM 2,RK-SB,AAA LIQUID PLAN,Inflow,1500000,0.15
+Code 4,Client 4,2025-04-02,AIF,D3,Gurgaon,RM 3,GA-SB,AAA India Equity Fund Scheme-1,Inflow,10000000,1
+Code 5,Client 5,2025-04-02,PMS,D4,Madurai,RM 4,GA-SB,AAA India Opportunity Plan Equity,Inflow,2500000,0.25
+Code 6,Client 6,2025-04-03,AIF,D3,Gurgaon,RM 5,GA-SB,AAA India Equity Fund Scheme-1,Inflow,2500000,0.25
+Code 7,Client 7,2025-04-04,AIF,D4,Chennai,RM 6,GA-SB,AAA India Equity Fund Scheme-1,Inflow,40000000,4
+Code 8,Client 8,2025-04-04,PMS,D4,Mumbai,RM 7,GA-SB,AAA India Opportunity Plan Equity,Inflow,10000000,1
+Code 9,Client 9,2025-04-04,PMS,D5,Kolkata,RM 8,SB,AAA India Opportunity Plan Equity,Inflow,6666000,0.6666
+Code 10,Client 10,2025-04-04,PMS,D5,Kolkata,RM 8,SB,AAA LIQUID PLAN,Inflow,13334000,1.3334
+Code 11,Client 11,2025-04-04,PMS,D2,Bangalore,RM 9,RK-SB,AAA India Opportunity Plan Equity,Inflow,1500000,0.15
+Code 12,Client 12,2025-04-04,PMS,D6,Delhi,RM 10,SB,AAA India Opportunity Plan Equity,Inflow,2000000,0.2
+Code 13,Client 13,2025-04-04,PMS,D6,Delhi,RM 10,SB,AAA LIQUID PLAN,Inflow,3000000,0.3
+Code 14,Client 14,2025-04-04,PMS,D4,Delhi,RM 11,GA-SB,AAA India Opportunity Plan Equity,Inflow,5000000,0.5
+Code 15,Client 15,2025-04-04,PMS,D4,Chennai,RM 6,GA-SB,AAA India Opportunity Plan Equity,Inflow,3000000,0.3
+Code 16,Client 16,2025-04-04,PMS,D4,Chennai,RM 6,GA-SB,AAA LIQUID PLAN,Inflow,6000000,0.6
+Code 17,Client 17,2025-04-07,AIF,D7,VADODARA,RM 12,RK-SB,AAA India Equity Fund Scheme-1,Inflow,20000000,2
+Code 22,Client 22,2025-04-08,PMS,D1,Bangalore,RM 15,GA-SB,AAA COUTURE,Inflow,25000000,2.5
+Code 23,Client 23,2025-04-09,AIF,D6,Mumbai,RM 16,SB,AAA India Equity Fund Scheme-1,Inflow,11000000,1.1
+Code 33,Client 33,2025-04-09,PMS,D1,Bangalore,RM 15,GA-SB,AAA COUTURE,Inflow,30000000,3
+Code 34,Client 34,2025-04-09,PMS,D1,Bangalore,RM 15,GA-SB,AAA COUTURE,Inflow,22100000,2.21
+Code 35,Client 35,2025-04-11,AIF,D2,Gurgaon,RM 21,RK-SB,AAA India Equity Fund Scheme-1,Inflow,15000000,1.5
+Code 41,Client 41,2025-04-14,AIF,D13,Pune,RM 24,SB,AAA India Equity Fund Scheme-1,Inflow,10000000,1
+Code 44,Client 44,2025-04-16,AIF,D4,Mumbai,RM 27,GA-SB,AAA India Equity Fund Scheme-1,Inflow,10000000,1
+Code 50,Client 50,2025-05-05,PMS,D7,Mumbai,RM 19,RK-SB,AAA India Opportunity Plan Equity,Inflow,5000000,0.5
+Code 51,Client 51,2025-05-10,PMS,D1,Bangalore,RM 15,GA-SB,AAA Budding Beasts Equity,Inflow,8000000,0.8
+Code 52,Client 52,2025-06-15,AIF,D3,Gurgaon,RM 3,GA-SB,AAA India Equity Fund Scheme-1,Inflow,15000000,1.5
+Code 53,Client 53,2025-07-01,PMS,D7,Delhi,RM 12,RK-SB,AAA India Opportunity Plan Equity,Inflow,7500000,0.75
+Code 54,Client 54,2025-07-20,AIF,D26,Delhi,RM 37,SB,AAA India Equity Fund Scheme-1,Inflow,510000000,51
+Code 55,Client 55,2025-08-05,PMS,D1,Bangalore,RM 15,GA-SB,AAA Budding Beasts Equity,Inflow,5000000,0.5
+Code 56,Client 56,2025-09-10,PMS,D4,Chennai,RM 6,GA-SB,AAA SHARIAH,Inflow,5000000,0.5
+Code 57,Client 57,2025-10-01,PMS,D7,Mumbai,RM 19,RK-SB,AAA LIQUID PLAN,Inflow,3000000,0.3`;
+
+  const sampleOutflow = `Client Code,Client Name,Date,PMS/AIF,Name of Distributor,Location,Distributor- RM Name,AAARM,SCHEMENAME,Transaction,Outflow amount,Amt in Crs
+Client 1111,Client 1111,2025-04-02,PMS,D24,Mumbai,RM 110,SB,AAA Budding Beasts Equity,Outflow,1500000,0.15
+Client 1112,Client 1112,2025-04-04,PMS,D2,Hyderabad,RM 9,RK-SB,AAA India Opportunity Plan Equity,Outflow,6414893.87,0.641489387
+Client 1113,Client 1113,2025-04-16,AIF,D1,Delhi,RM 87,GA-SB,AAA India Equity Fund Scheme-1,Outflow,22637017.22,2.2637
+Client 1114,Client 1114,2025-04-16,AIF,D1,Delhi,RM 87,GA-SB,AAA India Equity Fund Scheme-1,Outflow,27131507.47,2.7132
+Client 1115,Client 1115,2025-04-23,PMS,D1,Chennai,RM 500,GA-SB,AAA India Opportunity Plan Equity,Outflow,8431630.46,0.8432
+Client 1133,Client 1133,2025-05-13,PMS,D1,Bangalore,RM 15,GA-SB,AAA SHARIAH,Outflow,7000000,0.7
+Client 1134,Client 1134,2025-05-13,PMS,D1,Bangalore,RM 15,GA-SB,AAA SHARIAH,Outflow,10000000,1
+Client 1135,Client 1135,2025-05-16,AIF,D4,Delhi,RM 505,GA-SB,AAA India Equity Fund Scheme-1,Outflow,3500000,0.35
+Client 1136,Client 1136,2025-05-21,PMS,D4,Chennai,RM 6,GA-SB,AAA India Opportunity Plan Equity,Outflow,13000000,1.3
+Client 1138,Client 1138,2025-06-06,AIF,D4,Mumbai,RM 507,GA-SB,AAA India Equity Fund Scheme-1,Outflow,13285732.73,1.3286`;
+
+  inflowData = parseCSV(sampleInflow);
+  outflowData = parseCSV(sampleOutflow);
+  computeAll();
+  render();
+}
+
+// ─── SUMMARY TAB ───
+function renderSummary(c) {
+  const d = computed;
+  const totalIn = d.totalInflow;
+  const totalOut = d.totalOutflow;
+  const net = totalIn - totalOut;
+  
+  let html = renderFilterBar() + `
+    <div class="cards">
+      <div class="card"><div class="label">Total Inflow</div><div class="value green">${fmtCr(totalIn)}</div><div class="sub">${d.inflowCount} transactions</div></div>
+      <div class="card"><div class="label">Total Outflow</div><div class="value red">${fmtCr(totalOut)}</div><div class="sub">${d.outflowCount} transactions</div></div>
+      <div class="card"><div class="label">Net Flow</div><div class="value ${net >= 0 ? 'green' : 'red'}">${fmtCr(net)}</div><div class="sub">${net >= 0 ? 'Net Positive' : 'Net Negative'}</div></div>
+      <div class="card"><div class="label">PMS Inflow</div><div class="value blue">${fmtCr(d.categorySummary.PMS.inflow)}</div></div>
+      <div class="card"><div class="label">AIF Inflow</div><div class="value blue">${fmtCr(d.categorySummary.AIF.inflow)}</div></div>
+    </div>
+    
+    <div class="section-title"><div class="dot"></div> Product-wise Inflow / Outflow / Net Flow (₹ Crs)</div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Product (Scheme)</th><th>Inflow</th><th>Outflow</th><th>Net Flow</th></tr></thead>
+        <tbody>`;
+  
+  let totIn = 0, totOut = 0;
+  SCHEMES.forEach(s => {
+    const inf = d.productSummary[s].inflow;
+    const out = d.productSummary[s].outflow;
+    const nf = inf - out;
+    totIn += inf; totOut += out;
+    html += `<tr><td style="font-family:'DM Sans'">${s}</td><td class="pos">${fmt(inf)}</td><td class="neg">${fmt(out)}</td><td class="${nf >= 0 ? 'pos' : 'neg'}">${fmt(nf)}</td></tr>`;
+  });
+  html += `<tr style="font-weight:700;background:var(--surface2)"><td style="font-family:'DM Sans'">TOTAL</td><td class="pos">${fmt(totIn)}</td><td class="neg">${fmt(totOut)}</td><td class="${totIn-totOut >= 0 ? 'pos' : 'neg'}">${fmt(totIn-totOut)}</td></tr>`;
+  html += `</tbody></table></div>`;
+  
+  html += `<div class="section-title" style="margin-top:24px"><div class="dot" style="background:var(--accent2)"></div> Category-wise Breakdown (₹ Crs)</div>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Category</th><th>Inflow</th><th>Outflow</th><th>Net Flow</th></tr></thead>
+      <tbody>`;
+  ['PMS','AIF'].forEach(cat => {
+    const inf = d.categorySummary[cat].inflow;
+    const out = d.categorySummary[cat].outflow;
+    const nf = inf - out;
+    html += `<tr><td><span class="badge ${cat.toLowerCase()}">${cat}</span></td><td class="pos">${fmt(inf)}</td><td class="neg">${fmt(out)}</td><td class="${nf >= 0 ? 'pos' : 'neg'}">${fmt(nf)}</td></tr>`;
+  });
+  const ti = d.categorySummary.PMS.inflow + d.categorySummary.AIF.inflow;
+  const to = d.categorySummary.PMS.outflow + d.categorySummary.AIF.outflow;
+  html += `<tr style="font-weight:700;background:var(--surface2)"><td style="font-family:'DM Sans'">TOTAL</td><td class="pos">${fmt(ti)}</td><td class="neg">${fmt(to)}</td><td class="${ti-to >= 0 ? 'pos' : 'neg'}">${fmt(ti-to)}</td></tr>`;
+  html += `</tbody></table></div>`;
+  
+  c.innerHTML = html;
+}
+
+// ─── MONTHLY TRENDS ───
+function renderMonthly(c) {
+  const d = computed;
+  const colors = ['#38bdf8','#818cf8','#34d399','#fb923c','#f472b6','#fbbf24','#a78bfa'];
+  
+  let html = renderFilterBar() + `<div class="section-title"><div class="dot"></div> Monthly Inflow by Category (₹ Crs)</div>`;
+  html += `<div class="table-wrap"><table><thead><tr><th>Category</th>`;
+  MONTHS.forEach(m => html += `<th>${m}</th>`);
+  html += `<th>Total</th></tr></thead><tbody>`;
+  
+  ['PMS','AIF'].forEach(cat => {
+    html += `<tr><td><span class="badge ${cat.toLowerCase()}">${cat}</span></td>`;
+    let total = 0;
+    d.monthlyByCategory[cat].inflow.forEach(v => { total += v; html += `<td>${fmt(v)}</td>`; });
+    html += `<td style="font-weight:700">${fmt(total)}</td></tr>`;
+  });
+  html += `<tr style="font-weight:700;background:var(--surface2)"><td>TOTAL</td>`;
+  let grandTotal = 0;
+  for (let i = 0; i < 12; i++) {
+    const t = d.monthlyByCategory.PMS.inflow[i] + d.monthlyByCategory.AIF.inflow[i];
+    grandTotal += t;
+    html += `<td>${fmt(t)}</td>`;
+  }
+  html += `<td>${fmt(grandTotal)}</td></tr>`;
+  html += `</tbody></table></div>`;
+  
+  // Visual bar chart
+  html += `<div class="card" style="margin-bottom:24px;padding:24px">
+    <div style="font-size:14px;font-weight:600;margin-bottom:12px">Monthly Inflow Visualization</div>
+    <div class="legend">
+      <div class="legend-item"><div class="legend-dot" style="background:var(--accent)"></div>PMS</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--accent2)"></div>AIF</div>
+    </div>
+    <div class="bar-chart">`;
+  
+  const maxVal = Math.max(...MONTHS.map((_, i) => d.monthlyByCategory.PMS.inflow[i] + d.monthlyByCategory.AIF.inflow[i]), 1);
+  MONTHS.forEach((m, i) => {
+    const pms = d.monthlyByCategory.PMS.inflow[i];
+    const aif = d.monthlyByCategory.AIF.inflow[i];
+    const h1 = (pms / maxVal) * 100;
+    const h2 = (aif / maxVal) * 100;
+    html += `<div class="bar-col">
+      <div style="display:flex;gap:2px;align-items:flex-end;height:100px">
+        <div class="bar" style="height:${h1}%;background:var(--accent);width:18px" title="PMS: ${fmt(pms)}"></div>
+        <div class="bar" style="height:${h2}%;background:var(--accent2);width:18px" title="AIF: ${fmt(aif)}"></div>
+      </div>
+      <div style="font-size:11px;color:var(--text2)">${m}</div>
+    </div>`;
+  });
+  html += `</div></div>`;
+  
+  // Product monthly
+  html += `<div class="section-title"><div class="dot" style="background:var(--green)"></div> Monthly Inflow by Product (₹ Crs)</div>`;
+  html += `<div class="table-wrap"><table><thead><tr><th>Product</th>`;
+  MONTHS.forEach(m => html += `<th>${m}</th>`);
+  html += `<th>Total</th></tr></thead><tbody>`;
+  
+  SCHEMES.forEach((s, si) => {
+    html += `<tr><td style="font-family:'DM Sans';font-size:11px">${SCHEME_SHORT[s]}</td>`;
+    let total = 0;
+    d.monthlyByProduct[s].inflow.forEach(v => { total += v; html += `<td>${fmt(v)}</td>`; });
+    html += `<td style="font-weight:700">${fmt(total)}</td></tr>`;
+  });
+  html += `</tbody></table></div>`;
+  
+  // Outflow
+  html += `<div class="section-title" style="margin-top:24px"><div class="dot" style="background:var(--red)"></div> Monthly Outflow by Product (₹ Crs)</div>`;
+  html += `<div class="table-wrap"><table><thead><tr><th>Product</th>`;
+  MONTHS.forEach(m => html += `<th>${m}</th>`);
+  html += `<th>Total</th></tr></thead><tbody>`;
+  
+  SCHEMES.forEach(s => {
+    html += `<tr><td style="font-family:'DM Sans';font-size:11px">${SCHEME_SHORT[s]}</td>`;
+    let total = 0;
+    d.monthlyByProduct[s].outflow.forEach(v => { total += v; html += `<td class="neg">${fmt(v)}</td>`; });
+    html += `<td style="font-weight:700" class="neg">${fmt(total)}</td></tr>`;
+  });
+  html += `</tbody></table></div>`;
+  
+  c.innerHTML = html;
+}
+
+// ─── TOP DISTRIBUTORS ───
+function renderDistributors(c) {
+  const d = computed;
+  const sorted = Object.entries(d.distData).sort((a, b) => b[1].totalIn - a[1].totalIn);
+  
+  let html = renderFilterBar() + `<div class="section-title"><div class="dot"></div> All Distributors by Total Inflow</div>`;
+  html += `<div class="table-wrap"><table><thead><tr><th>#</th><th>Distributor</th><th>PMS Inflow</th><th>AIF Inflow</th><th>Total Inflow</th><th>Total Outflow</th><th>Net Flow</th><th># Tx</th></tr></thead><tbody>`;
+  
+  sorted.forEach(([name, data], i) => {
+    const nf = data.totalIn - data.totalOut;
+    html += `<tr>
+      <td>${i+1}</td>
+      <td style="font-family:'DM Sans';font-weight:600">${name}</td>
+      <td class="pos">${fmt(data.pmsIn)}</td>
+      <td style="color:var(--accent2)">${fmt(data.aifIn)}</td>
+      <td class="pos" style="font-weight:700">${fmt(data.totalIn)}</td>
+      <td class="neg">${fmt(data.totalOut)}</td>
+      <td class="${nf >= 0 ? 'pos' : 'neg'}" style="font-weight:700">${fmt(nf)}</td>
+      <td>${data.txCount}</td>
+    </tr>`;
+  });
+  html += `</tbody></table></div>`;
+  
+  // Top 3 tables
+  const topPMS = sorted.filter(([_, d]) => d.pmsIn > 0).sort((a, b) => b[1].pmsIn - a[1].pmsIn).slice(0, 3);
+  const topAIF = sorted.filter(([_, d]) => d.aifIn > 0).sort((a, b) => b[1].aifIn - a[1].aifIn).slice(0, 3);
+  
+  html += `<div class="grid-2" style="margin-top:24px">
+    <div>
+      <div class="section-title"><div class="dot" style="background:var(--accent)"></div> Top 3 — PMS</div>
+      <div class="table-wrap"><table><thead><tr><th>Rank</th><th>Distributor</th><th>PMS Inflow (₹ Crs)</th></tr></thead><tbody>`;
+  topPMS.forEach(([name, data], i) => {
+    html += `<tr><td>${i+1}</td><td style="font-family:'DM Sans'">${name}</td><td class="pos">${fmt(data.pmsIn)}</td></tr>`;
+  });
+  html += `</tbody></table></div></div>
+    <div>
+      <div class="section-title"><div class="dot" style="background:var(--accent2)"></div> Top 3 — AIF</div>
+      <div class="table-wrap"><table><thead><tr><th>Rank</th><th>Distributor</th><th>AIF Inflow (₹ Crs)</th></tr></thead><tbody>`;
+  topAIF.forEach(([name, data], i) => {
+    html += `<tr><td>${i+1}</td><td style="font-family:'DM Sans'">${name}</td><td style="color:var(--accent2)">${fmt(data.aifIn)}</td></tr>`;
+  });
+  html += `</tbody></table></div></div></div>`;
+  
+  c.innerHTML = html;
+}
+
+// ─── CITY ANALYSIS ───
+function renderCity(c) {
+  const d = computed;
+  const sorted = Object.entries(d.cityData).sort((a, b) => b[1].inflow - a[1].inflow);
+  const totalInflow = sorted.reduce((s, [_, v]) => s + v.inflow, 0);
+  
+  // --- Summary table ---
+  let html = renderFilterBar() + `<div class="section-title"><div class="dot"></div> City-wise Inflow / Outflow Analysis (₹ Crs)</div>`;
+  html += `<div class="table-wrap"><table><thead><tr><th>City</th><th>Inflow</th><th>Outflow</th><th>Net Flow</th><th>% of Total Inflow</th></tr></thead><tbody>`;
+  
+  sorted.forEach(([city, data]) => {
+    const nf = data.inflow - data.outflow;
+    const pctVal = totalInflow > 0 ? (data.inflow / totalInflow * 100) : 0;
+    html += `<tr>
+      <td style="font-family:'DM Sans';font-weight:500">${city}</td>
+      <td class="pos">${fmt(data.inflow)}</td>
+      <td class="neg">${fmt(data.outflow)}</td>
+      <td class="${nf >= 0 ? 'pos' : 'neg'}">${fmt(nf)}</td>
+      <td>${pctVal.toFixed(1)}%</td>
+    </tr>`;
+  });
+  
+  const totI = sorted.reduce((s, [_, v]) => s + v.inflow, 0);
+  const totO = sorted.reduce((s, [_, v]) => s + v.outflow, 0);
+  html += `<tr style="font-weight:700;background:var(--surface2)"><td style="font-family:'DM Sans'">TOTAL</td><td class="pos">${fmt(totI)}</td><td class="neg">${fmt(totO)}</td><td class="${totI-totO >= 0 ? 'pos' : 'neg'}">${fmt(totI-totO)}</td><td>100%</td></tr>`;
+  html += `</tbody></table></div>`;
+  
+  // --- Monthly Inflow by City ---
+  html += `<div class="section-title" style="margin-top:24px"><div class="dot" style="background:var(--green)"></div> City-wise Monthly Inflow Trend (₹ Crs)</div>`;
+  html += `<div class="table-wrap"><table><thead><tr><th>City</th>`;
+  MONTHS.forEach(m => html += `<th>${m}</th>`);
+  html += `<th>Total</th></tr></thead><tbody>`;
+  
+  sorted.forEach(([city, data]) => {
+    html += `<tr><td style="font-family:'DM Sans';font-weight:500">${city}</td>`;
+    let total = 0;
+    data.monthlyIn.forEach(v => { total += v; html += `<td class="pos">${v > 0 ? fmt(v) : '<span style="color:#475569">—</span>'}</td>`; });
+    html += `<td class="pos" style="font-weight:700">${fmt(total)}</td></tr>`;
+  });
+  // Totals row
+  html += `<tr style="font-weight:700;background:var(--surface2)"><td style="font-family:'DM Sans'">TOTAL</td>`;
+  let gTotal = 0;
+  for (let i = 0; i < 12; i++) {
+    const t = sorted.reduce((s, [_, d]) => s + d.monthlyIn[i], 0);
+    gTotal += t;
+    html += `<td class="pos">${fmt(t)}</td>`;
+  }
+  html += `<td class="pos">${fmt(gTotal)}</td></tr>`;
+  html += `</tbody></table></div>`;
+  
+  // --- Monthly Outflow by City ---
+  html += `<div class="section-title" style="margin-top:24px"><div class="dot" style="background:var(--red)"></div> City-wise Monthly Outflow Trend (₹ Crs)</div>`;
+  html += `<div class="table-wrap"><table><thead><tr><th>City</th>`;
+  MONTHS.forEach(m => html += `<th>${m}</th>`);
+  html += `<th>Total</th></tr></thead><tbody>`;
+  
+  sorted.forEach(([city, data]) => {
+    const total = data.monthlyOut.reduce((a,b) => a+b, 0);
+    if (total === 0) return; // skip cities with zero outflow
+    html += `<tr><td style="font-family:'DM Sans';font-weight:500">${city}</td>`;
+    data.monthlyOut.forEach(v => { html += `<td class="neg">${v > 0 ? fmt(v) : '<span style="color:#475569">—</span>'}</td>`; });
+    html += `<td class="neg" style="font-weight:700">${fmt(total)}</td></tr>`;
+  });
+  html += `<tr style="font-weight:700;background:var(--surface2)"><td style="font-family:'DM Sans'">TOTAL</td>`;
+  let gTotalOut = 0;
+  for (let i = 0; i < 12; i++) {
+    const t = sorted.reduce((s, [_, d]) => s + d.monthlyOut[i], 0);
+    gTotalOut += t;
+    html += `<td class="neg">${fmt(t)}</td>`;
+  }
+  html += `<td class="neg">${fmt(gTotalOut)}</td></tr>`;
+  html += `</tbody></table></div>`;
+  
+  // --- Monthly Net Flow by City ---
+  html += `<div class="section-title" style="margin-top:24px"><div class="dot" style="background:var(--accent2)"></div> City-wise Monthly Net Flow (₹ Crs)</div>`;
+  html += `<div class="table-wrap"><table><thead><tr><th>City</th>`;
+  MONTHS.forEach(m => html += `<th>${m}</th>`);
+  html += `<th>Net Total</th></tr></thead><tbody>`;
+  
+  sorted.forEach(([city, data]) => {
+    html += `<tr><td style="font-family:'DM Sans';font-weight:500">${city}</td>`;
+    let netTotal = 0;
+    for (let i = 0; i < 12; i++) {
+      const nf = data.monthlyIn[i] - data.monthlyOut[i];
+      netTotal += nf;
+      const cls = nf > 0 ? 'pos' : nf < 0 ? 'neg' : '';
+      html += `<td class="${cls}">${nf !== 0 ? fmt(nf) : '<span style="color:#475569">—</span>'}</td>`;
+    }
+    const cls = netTotal >= 0 ? 'pos' : 'neg';
+    html += `<td class="${cls}" style="font-weight:700">${fmt(netTotal)}</td></tr>`;
+  });
+  html += `<tr style="font-weight:700;background:var(--surface2)"><td style="font-family:'DM Sans'">TOTAL</td>`;
+  let gNet = 0;
+  for (let i = 0; i < 12; i++) {
+    const t = sorted.reduce((s, [_, d]) => s + d.monthlyIn[i] - d.monthlyOut[i], 0);
+    gNet += t;
+    const cls = t >= 0 ? 'pos' : 'neg';
+    html += `<td class="${cls}">${fmt(t)}</td>`;
+  }
+  html += `<td class="${gNet >= 0 ? 'pos' : 'neg'}">${fmt(gNet)}</td></tr>`;
+  html += `</tbody></table></div>`;
+  
+  c.innerHTML = html;
+}
+
+// ─── SCHEME x DISTRIBUTOR ───
+function renderDistScheme(c) {
+  let html = renderFilterBar() + `<div class="filter-row">
+    <label style="font-size:13px;color:var(--text2)">Product / Scheme:</label>
+    <select id="schemeDistFilter" onchange="updateDistSchemeTable()">`;
+  SCHEMES.forEach(s => { html += `<option value="${s}">${SCHEME_SHORT[s]}</option>`; });
+  html += `</select>
+    <label style="font-size:13px;color:var(--text2);margin-left:16px">Type:</label>
+    <select id="distTypeFilter" onchange="updateDistSchemeTable()">
+      <option value="inflow">Inflow</option>
+      <option value="outflow">Outflow</option>
+      <option value="net">Net Flow</option>
+    </select>
+  </div>`;
+  
+  html += `<div id="distSchemeTable"></div>`;
+  c.innerHTML = html;
+  updateDistSchemeTable();
+}
+
+function updateDistSchemeTable() {
+  const scheme = document.getElementById('schemeDistFilter').value;
+  const type = document.getElementById('distTypeFilter').value;
+  const dsm = computed.distSchemeMonthly;
+  const container = document.getElementById('distSchemeTable');
+  
+  const viewLabel = type === 'inflow' ? 'Inflow' : type === 'outflow' ? 'Outflow' : 'Net Flow';
+  
+  // Gather all distributors that have data for this scheme
+  const distRows = [];
+  for (const [dist, schemes] of Object.entries(dsm)) {
+    if (!schemes[scheme]) continue;
+    const inf = schemes[scheme].inflow;
+    const out = schemes[scheme].outflow;
+    let vals, total;
+    if (type === 'inflow') { vals = inf; total = inf.reduce((a,b) => a+b, 0); }
+    else if (type === 'outflow') { vals = out; total = out.reduce((a,b) => a+b, 0); }
+    else { vals = inf.map((v,i) => v - out[i]); total = vals.reduce((a,b) => a+b, 0); }
+    if (type !== 'net' && total === 0) continue;
+    if (type === 'net' && inf.reduce((a,b)=>a+b,0) === 0 && out.reduce((a,b)=>a+b,0) === 0) continue;
+    distRows.push({ name: dist, vals, total, totalIn: inf.reduce((a,b)=>a+b,0), totalOut: out.reduce((a,b)=>a+b,0) });
+  }
+  distRows.sort((a, b) => Math.abs(b.total) - Math.abs(a.total));
+  
+  let html = `<div class="section-title"><div class="dot"></div> ${SCHEME_SHORT[scheme]} — All Distributors Monthly ${viewLabel} (₹ Crs)</div>`;
+  html += `<div class="table-wrap"><table><thead><tr><th>Distributor</th>`;
+  MONTHS.forEach(m => html += `<th>${m}</th>`);
+  html += `<th>Total</th></tr></thead><tbody>`;
+  
+  distRows.forEach(row => {
+    html += `<tr><td style="font-family:'DM Sans';font-weight:600">${row.name}</td>`;
+    row.vals.forEach(v => {
+      let cls = type === 'inflow' ? 'pos' : type === 'outflow' ? 'neg' : (v > 0 ? 'pos' : v < 0 ? 'neg' : '');
+      html += `<td class="${cls}">${v !== 0 ? fmt(v) : '<span style="color:#475569">—</span>'}</td>`;
+    });
+    let cls = type === 'inflow' ? 'pos' : type === 'outflow' ? 'neg' : (row.total >= 0 ? 'pos' : 'neg');
+    html += `<td style="font-weight:700" class="${cls}">${fmt(row.total)}</td></tr>`;
+  });
+  
+  // Totals row
+  html += `<tr style="font-weight:700;background:var(--surface2)"><td style="font-family:'DM Sans'">TOTAL (${distRows.length} distributors)</td>`;
+  for (let i = 0; i < 12; i++) {
+    const t = distRows.reduce((s, r) => s + r.vals[i], 0);
+    let cls = type === 'inflow' ? 'pos' : type === 'outflow' ? 'neg' : (t >= 0 ? 'pos' : 'neg');
+    html += `<td class="${cls}">${fmt(t)}</td>`;
+  }
+  const gt = distRows.reduce((s, r) => s + r.total, 0);
+  let gtCls = type === 'inflow' ? 'pos' : type === 'outflow' ? 'neg' : (gt >= 0 ? 'pos' : 'neg');
+  html += `<td class="${gtCls}">${fmt(gt)}</td></tr>`;
+  html += `</tbody></table></div>`;
+  
+  if (distRows.length === 0) {
+    html = `<div style="text-align:center;padding:40px;color:var(--text2)">No distributor data found for ${SCHEME_SHORT[scheme]}</div>`;
+  }
+  
+  container.innerHTML = html;
+}
+
+// ─── SCHEME x RM ───
+function renderRMScheme(c) {
+  let html = renderFilterBar() + `<div class="filter-row">
+    <label style="font-size:13px;color:var(--text2)">Product / Scheme:</label>
+    <select id="schemeRMFilter" onchange="updateRMSchemeTable()">`;
+  SCHEMES.forEach(s => { html += `<option value="${s}">${SCHEME_SHORT[s]}</option>`; });
+  html += `</select>
+    <label style="font-size:13px;color:var(--text2);margin-left:16px">Type:</label>
+    <select id="rmTypeFilter" onchange="updateRMSchemeTable()">
+      <option value="inflow">Inflow</option>
+      <option value="outflow">Outflow</option>
+      <option value="net">Net Flow</option>
+    </select>
+  </div>`;
+  
+  html += `<div id="rmSchemeTable"></div>`;
+  c.innerHTML = html;
+  updateRMSchemeTable();
+}
+
+function updateRMSchemeTable() {
+  const scheme = document.getElementById('schemeRMFilter').value;
+  const type = document.getElementById('rmTypeFilter').value;
+  const rsm = computed.rmSchemeMonthly;
+  const container = document.getElementById('rmSchemeTable');
+  
+  const viewLabel = type === 'inflow' ? 'Inflow' : type === 'outflow' ? 'Outflow' : 'Net Flow';
+  
+  // Gather all RMs that have data for this scheme
+  const rmRows = [];
+  for (const [rm, schemes] of Object.entries(rsm)) {
+    if (!schemes[scheme]) continue;
+    const inf = schemes[scheme].inflow;
+    const out = schemes[scheme].outflow;
+    let vals, total;
+    if (type === 'inflow') { vals = inf; total = inf.reduce((a,b) => a+b, 0); }
+    else if (type === 'outflow') { vals = out; total = out.reduce((a,b) => a+b, 0); }
+    else { vals = inf.map((v,i) => v - out[i]); total = vals.reduce((a,b) => a+b, 0); }
+    if (type !== 'net' && total === 0) continue;
+    if (type === 'net' && inf.reduce((a,b)=>a+b,0) === 0 && out.reduce((a,b)=>a+b,0) === 0) continue;
+    rmRows.push({ name: rm, vals, total, totalIn: inf.reduce((a,b)=>a+b,0), totalOut: out.reduce((a,b)=>a+b,0) });
+  }
+  rmRows.sort((a, b) => Math.abs(b.total) - Math.abs(a.total));
+  
+  let html = `<div class="section-title"><div class="dot"></div> ${SCHEME_SHORT[scheme]} — All RMs Monthly ${viewLabel} (₹ Crs)</div>`;
+  html += `<div class="table-wrap"><table><thead><tr><th>RM Name</th>`;
+  MONTHS.forEach(m => html += `<th>${m}</th>`);
+  html += `<th>Total</th></tr></thead><tbody>`;
+  
+  rmRows.forEach(row => {
+    html += `<tr><td style="font-family:'DM Sans';font-weight:600">${row.name}</td>`;
+    row.vals.forEach(v => {
+      let cls = type === 'inflow' ? 'pos' : type === 'outflow' ? 'neg' : (v > 0 ? 'pos' : v < 0 ? 'neg' : '');
+      html += `<td class="${cls}">${v !== 0 ? fmt(v) : '<span style="color:#475569">—</span>'}</td>`;
+    });
+    let cls = type === 'inflow' ? 'pos' : type === 'outflow' ? 'neg' : (row.total >= 0 ? 'pos' : 'neg');
+    html += `<td style="font-weight:700" class="${cls}">${fmt(row.total)}</td></tr>`;
+  });
+  
+  // Totals row
+  html += `<tr style="font-weight:700;background:var(--surface2)"><td style="font-family:'DM Sans'">TOTAL (${rmRows.length} RMs)</td>`;
+  for (let i = 0; i < 12; i++) {
+    const t = rmRows.reduce((s, r) => s + r.vals[i], 0);
+    let cls = type === 'inflow' ? 'pos' : type === 'outflow' ? 'neg' : (t >= 0 ? 'pos' : 'neg');
+    html += `<td class="${cls}">${fmt(t)}</td>`;
+  }
+  const gt = rmRows.reduce((s, r) => s + r.total, 0);
+  let gtCls = type === 'inflow' ? 'pos' : type === 'outflow' ? 'neg' : (gt >= 0 ? 'pos' : 'neg');
+  html += `<td class="${gtCls}">${fmt(gt)}</td></tr>`;
+  html += `</tbody></table></div>`;
+  
+  if (rmRows.length === 0) {
+    html = `<div style="text-align:center;padding:40px;color:var(--text2)">No RM data found for ${SCHEME_SHORT[scheme]}</div>`;
+  }
+  
+  container.innerHTML = html;
+}
+
+// ─── DIST PERFORMANCE ───
+function renderDistPerf(c) {
+  const d = computed;
+  const sorted = Object.entries(d.distPerf).sort((a, b) => b[1].totalIn - a[1].totalIn);
+
+  let html = renderFilterBar() + `<div class="filter-row">
+    <label style="font-size:13px;color:var(--text2)">View:</label>
+    <select id="distPerfView" onchange="updateDistPerfTable()">
+      <option value="inflow">Monthly Inflow</option>
+      <option value="outflow">Monthly Outflow</option>
+      <option value="net">Monthly Net Flow</option>
+    </select>
+  </div>`;
+  html += `<div id="distPerfTableWrap"></div>`;
+  c.innerHTML = html;
+  updateDistPerfTable();
+}
+
+function updateDistPerfTable() {
+  const d = computed;
+  const view = document.getElementById('distPerfView').value;
+  const sorted = Object.entries(d.distPerf).sort((a, b) => b[1].totalIn - a[1].totalIn);
+  const container = document.getElementById('distPerfTableWrap');
+  
+  const viewLabel = view === 'inflow' ? 'Inflow' : view === 'outflow' ? 'Outflow' : 'Net Flow';
+  
+  let html = `<div class="section-title"><div class="dot"></div> Distributor Performance — Monthly ${viewLabel} (₹ Crs)</div>`;
+  html += `<div class="table-wrap"><table><thead><tr><th>Distributor</th><th>Total Inflow</th><th>Total Outflow</th><th>Net Flow</th><th>Net %</th><th># Tx</th>`;
+  MONTHS.forEach(m => html += `<th>${m}</th>`);
+  html += `</tr></thead><tbody>`;
+  
+  sorted.forEach(([dist, data]) => {
+    const nf = data.totalIn - data.totalOut;
+    const nfPct = data.totalIn > 0 ? (nf / data.totalIn) : 0;
+    html += `<tr>
+      <td style="font-family:'DM Sans';font-weight:600">${dist}</td>
+      <td class="pos" style="font-weight:600">${fmt(data.totalIn)}</td>
+      <td class="neg">${fmt(data.totalOut)}</td>
+      <td class="${nf >= 0 ? 'pos' : 'neg'}" style="font-weight:600">${fmt(nf)}</td>
+      <td>${pct(nfPct)}</td>
+      <td>${data.txCount}</td>`;
+    for (let i = 0; i < 12; i++) {
+      let val;
+      if (view === 'inflow') val = data.monthlyIn[i];
+      else if (view === 'outflow') val = data.monthlyOut[i];
+      else val = data.monthlyIn[i] - data.monthlyOut[i];
+      
+      let cls = '';
+      if (view === 'inflow') cls = val > 0 ? 'pos' : '';
+      else if (view === 'outflow') cls = val > 0 ? 'neg' : '';
+      else cls = val > 0 ? 'pos' : val < 0 ? 'neg' : '';
+      
+      html += `<td class="${cls}">${val !== 0 ? fmt(val) : '<span style="color:#475569">—</span>'}</td>`;
+    }
+    html += `</tr>`;
+  });
+  
+  // Totals row
+  html += `<tr style="font-weight:700;background:var(--surface2)"><td style="font-family:'DM Sans'">TOTAL</td>`;
+  const totIn = sorted.reduce((s, [_, d]) => s + d.totalIn, 0);
+  const totOut = sorted.reduce((s, [_, d]) => s + d.totalOut, 0);
+  const totNet = totIn - totOut;
+  html += `<td class="pos">${fmt(totIn)}</td><td class="neg">${fmt(totOut)}</td><td class="${totNet >= 0 ? 'pos' : 'neg'}">${fmt(totNet)}</td><td>${pct(totIn > 0 ? totNet/totIn : 0)}</td><td>${sorted.reduce((s,[_,d])=>s+d.txCount,0)}</td>`;
+  for (let i = 0; i < 12; i++) {
+    let val;
+    if (view === 'inflow') val = sorted.reduce((s, [_, d]) => s + d.monthlyIn[i], 0);
+    else if (view === 'outflow') val = sorted.reduce((s, [_, d]) => s + d.monthlyOut[i], 0);
+    else val = sorted.reduce((s, [_, d]) => s + d.monthlyIn[i] - d.monthlyOut[i], 0);
+    let cls = view === 'inflow' ? 'pos' : view === 'outflow' ? 'neg' : (val >= 0 ? 'pos' : 'neg');
+    html += `<td class="${cls}">${fmt(val)}</td>`;
+  }
+  html += `</tr>`;
+  
+  html += `</tbody></table></div>`;
+  container.innerHTML = html;
+}
+
+// ─── RM PERFORMANCE ───
+function renderRMPerf(c) {
+  const d = computed;
+
+  let html = renderFilterBar() + `<div class="filter-row">
+    <label style="font-size:13px;color:var(--text2)">View:</label>
+    <select id="rmPerfView" onchange="updateRMPerfTable()">
+      <option value="inflow">Monthly Inflow</option>
+      <option value="outflow">Monthly Outflow</option>
+      <option value="net">Monthly Net Flow</option>
+    </select>
+  </div>`;
+  html += `<div id="rmPerfTableWrap"></div>`;
+  c.innerHTML = html;
+  updateRMPerfTable();
+}
+
+function updateRMPerfTable() {
+  const d = computed;
+  const view = document.getElementById('rmPerfView').value;
+  const sorted = Object.entries(d.rmPerf).sort((a, b) => {
+    // Sort by total inflow descending, but also support natural sort for same values
+    if (b[1].totalIn !== a[1].totalIn) return b[1].totalIn - a[1].totalIn;
+    return naturalSort(a[0], b[0]);
+  });
+  const container = document.getElementById('rmPerfTableWrap');
+  
+  const viewLabel = view === 'inflow' ? 'Inflow' : view === 'outflow' ? 'Outflow' : 'Net Flow';
+  
+  let html = `<div class="section-title"><div class="dot"></div> RM Performance — Monthly ${viewLabel} (₹ Crs)</div>`;
+  html += `<div class="table-wrap"><table><thead><tr><th>RM Name</th><th>Total Inflow</th><th>Total Outflow</th><th>Net Flow</th><th>Net %</th>`;
+  MONTHS.forEach(m => html += `<th>${m}</th>`);
+  html += `</tr></thead><tbody>`;
+  
+  sorted.forEach(([rm, data]) => {
+    const nf = data.totalIn - data.totalOut;
+    const nfPct = data.totalIn > 0 ? (nf / data.totalIn) : 0;
+    html += `<tr>
+      <td style="font-family:'DM Sans';font-weight:500">${rm}</td>
+      <td class="pos" style="font-weight:600">${fmt(data.totalIn)}</td>
+      <td class="neg">${fmt(data.totalOut)}</td>
+      <td class="${nf >= 0 ? 'pos' : 'neg'}" style="font-weight:600">${fmt(nf)}</td>
+      <td>${pct(nfPct)}</td>`;
+    for (let i = 0; i < 12; i++) {
+      let val;
+      if (view === 'inflow') val = data.monthlyIn[i];
+      else if (view === 'outflow') val = data.monthlyOut[i];
+      else val = data.monthlyIn[i] - data.monthlyOut[i];
+      
+      let cls = '';
+      if (view === 'inflow') cls = val > 0 ? 'pos' : '';
+      else if (view === 'outflow') cls = val > 0 ? 'neg' : '';
+      else cls = val > 0 ? 'pos' : val < 0 ? 'neg' : '';
+      
+      html += `<td class="${cls}">${val !== 0 ? fmt(val) : '<span style="color:#475569">—</span>'}</td>`;
+    }
+    html += `</tr>`;
+  });
+  
+  // Totals row
+  html += `<tr style="font-weight:700;background:var(--surface2)"><td style="font-family:'DM Sans'">TOTAL</td>`;
+  const totIn = sorted.reduce((s, [_, d]) => s + d.totalIn, 0);
+  const totOut = sorted.reduce((s, [_, d]) => s + d.totalOut, 0);
+  const totNet = totIn - totOut;
+  html += `<td class="pos">${fmt(totIn)}</td><td class="neg">${fmt(totOut)}</td><td class="${totNet >= 0 ? 'pos' : 'neg'}">${fmt(totNet)}</td><td>${pct(totIn > 0 ? totNet/totIn : 0)}</td>`;
+  for (let i = 0; i < 12; i++) {
+    let val;
+    if (view === 'inflow') val = sorted.reduce((s, [_, d]) => s + d.monthlyIn[i], 0);
+    else if (view === 'outflow') val = sorted.reduce((s, [_, d]) => s + d.monthlyOut[i], 0);
+    else val = sorted.reduce((s, [_, d]) => s + d.monthlyIn[i] - d.monthlyOut[i], 0);
+    let cls = view === 'inflow' ? 'pos' : view === 'outflow' ? 'neg' : (val >= 0 ? 'pos' : 'neg');
+    html += `<td class="${cls}">${fmt(val)}</td>`;
+  }
+  html += `</tr>`;
+  
+  html += `</tbody></table></div>`;
+  container.innerHTML = html;
+}
+
+// ─── INIT ───
+render();
+</script>
+</body>
+</html>
