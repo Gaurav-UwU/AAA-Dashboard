@@ -1,0 +1,2764 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AAA Inflow-Outflow Dashboard — FY 25-26</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+  :root {
+    /* Ink palette */
+    --ink-950: #070A14;
+    --ink-900: #0B0F1E;
+    --ink-800: #131829;
+    --ink-700: #1A2137;
+    --ink-600: #232C48;
+    --line: #2A3148;
+    --line-hi: #3A4368;
+
+    /* Text */
+    --text: #E9ECF6;
+    --text-2: #9AA2BA;
+    --text-3: #626A85;
+
+    /* Chromatic accents — finance-specific */
+    --saffron: #F59E0B;
+    --saffron-bright: #FBBF24;
+    --saffron-deep: #B45309;
+
+    --violet: #A855F7;
+    --violet-bright: #C084FC;
+    --violet-deep: #6D28D9;
+
+    --lime: #A3E635;
+    --lime-bright: #D9F99D;
+    --lime-deep: #4D7C0F;
+
+    --crimson: #F43F5E;
+    --crimson-bright: #FB7185;
+    --crimson-deep: #9F1239;
+
+    --cyan: #22D3EE;
+    --cyan-bright: #67E8F9;
+    --cyan-deep: #0E7490;
+
+    --pink: #EC4899;
+    --gold: #EAB308;
+
+    /* Semantic aliases */
+    --bg: var(--ink-900);
+    --surface: var(--ink-800);
+    --surface2: var(--ink-700);
+    --border: var(--line);
+    --accent: var(--saffron);
+    --accent2: var(--violet);
+    --green: var(--lime);
+    --red: var(--crimson);
+    --orange: var(--saffron);
+    --yellow: var(--gold);
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: 'Geist', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    font-feature-settings: 'ss01', 'cv11';
+    position: relative;
+    overflow-x: hidden;
+  }
+
+  /* Atmospheric background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 60% 40% at 15% 0%, rgba(168, 85, 247, 0.10), transparent 55%),
+      radial-gradient(ellipse 50% 35% at 90% 30%, rgba(245, 158, 11, 0.08), transparent 55%),
+      radial-gradient(ellipse 40% 30% at 50% 110%, rgba(34, 211, 238, 0.06), transparent 55%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* Noise grain for editorial feel */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.04;
+    mix-blend-mode: overlay;
+  }
+
+  body > * { position: relative; z-index: 1; }
+
+  /* === HEADER === */
+  .app-header {
+    background: linear-gradient(180deg, rgba(11,15,30,0.92) 0%, rgba(11,15,30,0.65) 100%);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-bottom: 1px solid var(--line);
+    padding: 22px 40px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    gap: 20px;
+  }
+
+  .app-header::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent, rgba(245,158,11,0.025) 30%, rgba(168,85,247,0.025) 70%, transparent);
+    pointer-events: none;
+  }
+
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .brand-mark {
+    width: 54px;
+    height: 44px;
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+    filter: drop-shadow(0 3px 10px rgba(211, 47, 68, 0.25));
+  }
+  .brand-mark svg { width: 100%; height: 100%; }
+
+  .app-header h1 {
+    font-family: 'Instrument Serif', serif;
+    font-size: 28px;
+    font-weight: 400;
+    letter-spacing: -0.3px;
+    line-height: 1;
+    color: var(--text);
+  }
+
+  .app-header h1 em {
+    font-style: italic;
+    background: linear-gradient(95deg, var(--saffron) 0%, var(--crimson) 45%, var(--violet) 90%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .app-header .subtitle {
+    font-size: 10.5px;
+    color: var(--text-3);
+    margin-top: 5px;
+    text-transform: uppercase;
+    letter-spacing: 2.2px;
+    font-weight: 500;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .data-status {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--text-2);
+    padding: 7px 14px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .data-status.loaded {
+    color: var(--lime);
+    border-color: rgba(163, 230, 53, 0.3);
+    background: rgba(163, 230, 53, 0.05);
+  }
+  .data-status.loaded::before {
+    content: '';
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--lime); box-shadow: 0 0 10px var(--lime);
+  }
+
+  /* === TABS === */
+  .tabs {
+    display: flex;
+    gap: 2px;
+    padding: 10px 40px;
+    background: rgba(19, 24, 41, 0.85);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--line);
+    overflow-x: auto;
+    position: sticky;
+    top: 87px;
+    z-index: 50;
+    scrollbar-width: thin;
+  }
+
+  .tab {
+    padding: 9px 16px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--text-2);
+    transition: all 0.18s cubic-bezier(0.4,0,0.2,1);
+    white-space: nowrap;
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+  }
+
+  .tab:hover { background: var(--surface2); color: var(--text); }
+
+  .tab.active {
+    background: var(--ink-900);
+    color: var(--text);
+    font-weight: 600;
+    box-shadow: inset 0 0 0 1px var(--line-hi);
+  }
+
+  .tab.active::after {
+    content: '';
+    position: absolute;
+    bottom: -11px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 28px;
+    height: 2px;
+    background: var(--saffron);
+    border-radius: 2px 2px 0 0;
+    box-shadow: 0 0 12px var(--saffron);
+  }
+
+  .tab .dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--saffron);
+    opacity: 0.8;
+  }
+  .tab[data-tab="input"] .dot { background: var(--cyan); }
+  .tab[data-tab="summary"] .dot { background: var(--saffron); }
+  .tab[data-tab="monthly"] .dot { background: var(--violet); }
+  .tab[data-tab="distributors"] .dot { background: var(--lime); }
+  .tab[data-tab="city"] .dot { background: var(--pink); }
+  .tab[data-tab="dist-scheme"] .dot { background: var(--gold); }
+  .tab[data-tab="rm-scheme"] .dot { background: var(--crimson); }
+  .tab[data-tab="dist-perf"] .dot { background: var(--cyan); }
+  .tab[data-tab="rm-perf"] .dot { background: var(--violet); }
+
+  /* === CONTENT === */
+  .content {
+    padding: 32px 40px 80px;
+    max-width: 1780px;
+    margin: 0 auto;
+    animation: fadeSlideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  @keyframes fadeSlideIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+
+  /* === UPLOAD ZONE === */
+  .upload-zone {
+    border: 1.5px dashed var(--line-hi);
+    border-radius: 18px;
+    padding: 40px;
+    text-align: center;
+    background: linear-gradient(180deg, var(--surface), var(--ink-900));
+    margin-bottom: 24px;
+    transition: all 0.25s;
+    position: relative;
+  }
+
+  .upload-zone:hover {
+    border-color: var(--saffron);
+    box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.08);
+  }
+
+  .upload-zone h3 {
+    font-family: 'Instrument Serif', serif;
+    font-size: 26px;
+    font-weight: 400;
+    margin-bottom: 8px;
+    letter-spacing: -0.2px;
+  }
+  .upload-zone h3 em { font-style: italic; color: var(--saffron); }
+  .upload-zone p { color: var(--text-2); font-size: 13.5px; margin-bottom: 20px; }
+
+  .upload-row { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+
+  .upload-btn, .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 11px 20px;
+    border-radius: 10px;
+    font-size: 13.5px;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: all 0.18s;
+    font-family: 'Geist', sans-serif;
+    white-space: nowrap;
+  }
+
+  .upload-btn.primary, .btn.primary {
+    background: linear-gradient(135deg, var(--saffron) 0%, var(--saffron-deep) 100%);
+    color: var(--ink-950);
+    border-color: var(--saffron-deep);
+    box-shadow: 0 2px 12px rgba(245, 158, 11, 0.25);
+  }
+  .upload-btn.primary:hover, .btn.primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 20px rgba(245, 158, 11, 0.35);
+  }
+
+  .upload-btn.secondary, .btn.ghost, .btn.secondary {
+    background: var(--surface2);
+    color: var(--text);
+    border-color: var(--line);
+  }
+  .upload-btn.secondary:hover, .btn.ghost:hover, .btn.secondary:hover {
+    border-color: var(--saffron);
+    background: var(--ink-600);
+  }
+
+  .btn.small {
+    padding: 6px 12px;
+    font-size: 12px;
+    border-radius: 7px;
+  }
+
+  /* === KPI CARDS === */
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 16px;
+    margin-bottom: 32px;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 20px 22px 18px;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.22s;
+    min-height: 110px;
+  }
+
+  .card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 2px;
+    background: var(--saffron);
+    opacity: 0.65;
+  }
+
+  .card.accent-saffron::before { background: linear-gradient(90deg, var(--saffron-bright), var(--saffron-deep)); }
+  .card.accent-lime::before { background: linear-gradient(90deg, var(--lime-bright), var(--lime-deep)); }
+  .card.accent-crimson::before { background: linear-gradient(90deg, var(--crimson-bright), var(--crimson-deep)); }
+  .card.accent-violet::before { background: linear-gradient(90deg, var(--violet-bright), var(--violet-deep)); }
+  .card.accent-cyan::before { background: linear-gradient(90deg, var(--cyan-bright), var(--cyan-deep)); }
+  .card.accent-pink::before { background: linear-gradient(90deg, #F9A8D4, var(--pink)); }
+
+  .card:hover {
+    transform: translateY(-2px);
+    border-color: var(--line-hi);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+  }
+
+  .card .label {
+    font-size: 10.5px;
+    color: var(--text-3);
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    margin-bottom: 10px;
+    font-weight: 600;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .card .value {
+    font-size: 30px;
+    font-weight: 400;
+    font-family: 'Instrument Serif', serif;
+    letter-spacing: -0.6px;
+    line-height: 1;
+  }
+
+  .card .value .unit {
+    font-family: 'Geist', sans-serif;
+    font-size: 14px;
+    color: var(--text-3);
+    margin-left: 4px;
+    font-weight: 400;
+  }
+
+  .card .value.green, .card .value.lime { color: var(--lime); }
+  .card .value.red, .card .value.crimson { color: var(--crimson); }
+  .card .value.blue, .card .value.cyan { color: var(--cyan); }
+  .card .value.saffron { color: var(--saffron); }
+  .card .value.violet { color: var(--violet); }
+
+  .card .sub {
+    font-size: 11.5px;
+    color: var(--text-3);
+    margin-top: 10px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  .card .spark-wrap {
+    position: absolute;
+    bottom: 8px;
+    right: 12px;
+    pointer-events: none;
+  }
+
+  .delta {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    padding: 2px 7px;
+    border-radius: 5px;
+    font-size: 10.5px;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+  }
+  .delta.pos { background: rgba(163, 230, 53, 0.14); color: var(--lime); }
+  .delta.neg { background: rgba(244, 63, 94, 0.14); color: var(--crimson); }
+  .delta.neutral { background: var(--surface2); color: var(--text-3); }
+
+  /* === TABLES === */
+  .table-wrap {
+    overflow: auto;
+    border-radius: 14px;
+    margin-bottom: 28px;
+    max-height: 680px;
+    border: 1px solid var(--line);
+    background: var(--surface);
+    scrollbar-width: thin;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 12.5px;
+    background: transparent;
+  }
+
+  thead th {
+    background: var(--surface2);
+    padding: 11px 14px;
+    text-align: left;
+    font-weight: 600;
+    font-size: 10.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--text-2);
+    border-bottom: 1px solid var(--line-hi);
+    position: sticky;
+    top: 0;
+    white-space: nowrap;
+    z-index: 5;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  /* Sticky first column */
+  thead th:first-child,
+  tbody td:first-child {
+    position: sticky;
+    left: 0;
+    z-index: 4;
+  }
+  thead th:first-child {
+    z-index: 15;
+    background: var(--surface2);
+    box-shadow: 2px 0 0 var(--line-hi);
+  }
+  tbody td:first-child {
+    background: var(--surface);
+    box-shadow: 2px 0 0 var(--line);
+    font-family: 'Geist', sans-serif;
+    font-weight: 500;
+    color: var(--text);
+  }
+  tbody tr:hover td:first-child {
+    background: var(--ink-700);
+  }
+  tbody tr.total-row td:first-child,
+  tbody tr.total-row td {
+    background: var(--surface2) !important;
+    font-weight: 700 !important;
+    border-top: 1px solid var(--line-hi);
+  }
+  tbody tr.total-row td:first-child {
+    background: var(--ink-600) !important;
+    color: var(--saffron) !important;
+  }
+
+  td {
+    padding: 9px 14px;
+    border-bottom: 1px solid rgba(42, 49, 72, 0.55);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11.5px;
+    font-feature-settings: 'tnum';
+    position: relative;
+  }
+
+  tbody tr:hover td { background: rgba(245, 158, 11, 0.035); }
+
+  tbody tr:last-child td { border-bottom: none; }
+
+  /* Heatmap intensity cells */
+  td.heat {
+    background-color: rgba(var(--heat-rgb, 163, 230, 53), calc(var(--heat, 0) * 0.15));
+  }
+
+  /* Delta column */
+  th.dcol, td.dcol {
+    font-size: 10.5px;
+    text-align: center;
+    background: rgba(0, 0, 0, 0.18);
+    padding-left: 8px;
+    padding-right: 8px;
+    min-width: 46px;
+  }
+  thead th.dcol { color: var(--text-3); }
+
+  /* FY header groups (colspan cells) */
+  thead th.group-head {
+    text-align: center;
+    border-bottom: 1px solid var(--line-hi);
+    color: var(--text);
+    background: var(--ink-700);
+    font-weight: 700;
+  }
+  thead th.group-head.g-in { color: var(--lime); }
+  thead th.group-head.g-out { color: var(--crimson); }
+  thead th.group-head.g-net { color: var(--saffron); }
+
+  /* Month separator — subtle vertical rule between month groups */
+  td.mstart, th.mstart { border-left: 1px solid rgba(42, 49, 72, 0.6); }
+
+  .pos { color: var(--lime); }
+  .neg { color: var(--crimson); }
+  .dim { color: var(--text-3); }
+  .muted-dash { color: var(--text-3); opacity: 0.5; }
+
+  /* === SECTION TITLE === */
+  .section-title {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin: 32px 0 16px;
+  }
+
+  .section-title .swatch {
+    width: 5px;
+    height: 22px;
+    border-radius: 2px;
+    background: var(--saffron);
+    flex-shrink: 0;
+  }
+
+  .section-title.accent-lime .swatch { background: linear-gradient(180deg, var(--lime-bright), var(--lime-deep)); }
+  .section-title.accent-crimson .swatch { background: linear-gradient(180deg, var(--crimson-bright), var(--crimson-deep)); }
+  .section-title.accent-violet .swatch { background: linear-gradient(180deg, var(--violet-bright), var(--violet-deep)); }
+  .section-title.accent-saffron .swatch { background: linear-gradient(180deg, var(--saffron-bright), var(--saffron-deep)); }
+  .section-title.accent-cyan .swatch { background: linear-gradient(180deg, var(--cyan-bright), var(--cyan-deep)); }
+  .section-title.accent-pink .swatch { background: linear-gradient(180deg, #F9A8D4, var(--pink)); }
+
+  .section-title h2 {
+    font-family: 'Instrument Serif', serif;
+    font-size: 24px;
+    font-weight: 400;
+    letter-spacing: -0.3px;
+    color: var(--text);
+    line-height: 1.1;
+  }
+  .section-title h2 em {
+    font-style: italic;
+    color: var(--text-2);
+  }
+
+  .section-title .tag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10.5px;
+    color: var(--text-3);
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    padding: 3px 8px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 5px;
+  }
+
+  /* Compact "old" section-title fallback */
+  .section-title .dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--saffron);
+    box-shadow: 0 0 8px currentColor;
+  }
+
+  /* === FILTER BAR === */
+  .filter-bar, .filter-row {
+    background: rgba(19, 24, 41, 0.85);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 11px 16px;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .filter-bar.sticky {
+    position: sticky;
+    top: 132px;
+    z-index: 40;
+  }
+
+  .filter-label {
+    font-size: 10.5px;
+    color: var(--text-3);
+    text-transform: uppercase;
+    letter-spacing: 1.4px;
+    font-weight: 600;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .filter-sep {
+    width: 1px;
+    height: 20px;
+    background: var(--line);
+    margin: 0 4px;
+  }
+
+  /* Select */
+  select {
+    background-color: var(--surface2);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    color: var(--text);
+    padding: 7px 30px 7px 12px;
+    font-size: 12.5px;
+    font-family: 'Geist', sans-serif;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%239AA2BA' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+  }
+  select:hover { border-color: var(--line-hi); }
+  select:focus { outline: none; border-color: var(--saffron); box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.1); }
+
+  /* Text input */
+  .text-input {
+    background: var(--surface2);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    color: var(--text);
+    padding: 7px 12px 7px 32px;
+    font-size: 12.5px;
+    font-family: 'Geist', sans-serif;
+    width: 220px;
+    transition: all 0.15s;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%239AA2BA' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.3-4.3'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: 10px center;
+  }
+  .text-input::placeholder { color: var(--text-3); }
+  .text-input:focus { outline: none; border-color: var(--saffron); box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.1); }
+
+  /* === BADGES === */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 9px;
+    border-radius: 5px;
+    font-size: 10.5px;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 600;
+    letter-spacing: 0.6px;
+    text-transform: uppercase;
+  }
+  .badge.pms {
+    background: rgba(245, 158, 11, 0.1);
+    color: var(--saffron);
+    border: 1px solid rgba(245, 158, 11, 0.25);
+  }
+  .badge.aif {
+    background: rgba(168, 85, 247, 0.1);
+    color: var(--violet);
+    border: 1px solid rgba(168, 85, 247, 0.25);
+  }
+
+  /* === BAR CHART === */
+  .chart-card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 24px 24px 20px;
+    margin-bottom: 28px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .chart-card .chart-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .chart-card h3 {
+    font-family: 'Instrument Serif', serif;
+    font-size: 20px;
+    font-weight: 400;
+    letter-spacing: -0.2px;
+  }
+  .chart-card h3 em { font-style: italic; color: var(--text-2); }
+
+  .bar-chart {
+    display: flex;
+    align-items: flex-end;
+    gap: 6px;
+    height: 160px;
+    padding: 12px 0 12px;
+    border-bottom: 1px solid var(--line);
+    margin-bottom: 10px;
+  }
+
+  .bar-col {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    position: relative;
+  }
+
+  .bar-col .bars {
+    display: flex;
+    gap: 2px;
+    align-items: flex-end;
+    height: 120px;
+    width: 100%;
+    justify-content: center;
+  }
+
+  .bar {
+    width: 16px;
+    border-radius: 4px 4px 0 0;
+    min-height: 2px;
+    transition: height 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+    position: relative;
+  }
+
+  .bar.b-saffron { background: linear-gradient(180deg, var(--saffron-bright), var(--saffron)); box-shadow: 0 0 18px rgba(245,158,11,0.3); }
+  .bar.b-violet { background: linear-gradient(180deg, var(--violet-bright), var(--violet)); box-shadow: 0 0 18px rgba(168,85,247,0.3); }
+  .bar.b-lime { background: linear-gradient(180deg, var(--lime-bright), var(--lime)); box-shadow: 0 0 18px rgba(163,230,53,0.3); }
+  .bar.b-crimson { background: linear-gradient(180deg, var(--crimson-bright), var(--crimson)); box-shadow: 0 0 18px rgba(244,63,94,0.3); }
+  .bar.b-cyan { background: linear-gradient(180deg, var(--cyan-bright), var(--cyan)); box-shadow: 0 0 18px rgba(34,211,238,0.3); }
+
+  .bar-col .mlabel {
+    font-size: 10.5px;
+    color: var(--text-3);
+    font-family: 'JetBrains Mono', monospace;
+    letter-spacing: 0.3px;
+    text-align: center;
+  }
+
+  .legend {
+    display: flex;
+    gap: 18px;
+    flex-wrap: wrap;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 11.5px;
+    color: var(--text-2);
+    font-family: 'JetBrains Mono', monospace;
+    letter-spacing: 0.3px;
+  }
+
+  .legend-dot {
+    width: 12px;
+    height: 4px;
+    border-radius: 2px;
+  }
+
+  /* === STATUS BAR === */
+  .status-bar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 18px;
+    background: linear-gradient(90deg, rgba(163, 230, 53, 0.08), rgba(163, 230, 53, 0.02));
+    border: 1px solid rgba(163, 230, 53, 0.22);
+    border-radius: 12px;
+    font-size: 12.5px;
+    color: var(--lime);
+    margin-bottom: 24px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .status-bar::before {
+    content: '';
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--lime);
+    box-shadow: 0 0 14px var(--lime);
+    animation: pulse 2.2s infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(0.85); }
+  }
+
+  /* === TEXTAREA === */
+  textarea {
+    width: 100%;
+    min-height: 180px;
+    background: var(--surface2);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11.5px;
+    padding: 16px;
+    resize: vertical;
+    margin-bottom: 12px;
+    transition: all 0.15s;
+  }
+  textarea:focus {
+    outline: none;
+    border-color: var(--saffron);
+    box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.08);
+  }
+
+  /* === GRID === */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+  @media (max-width: 900px) { .grid-2 { grid-template-columns: 1fr; } }
+
+  .hidden { display: none; }
+  input[type="file"] { display: none; }
+
+  /* === TABLE TOOLS === */
+  .table-tools {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+  }
+  .table-tools .right {
+    margin-left: auto;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+
+  /* === EMPTY STATE === */
+  .empty-state {
+    text-align: center;
+    padding: 80px 24px;
+    color: var(--text-2);
+  }
+  .empty-state h3 {
+    font-family: 'Instrument Serif', serif;
+    font-size: 32px;
+    font-weight: 400;
+    font-style: italic;
+    color: var(--text);
+    margin-bottom: 12px;
+    letter-spacing: -0.3px;
+  }
+  .empty-state p { font-size: 14px; color: var(--text-3); max-width: 460px; margin: 0 auto; line-height: 1.5; }
+
+  /* === SCROLLBARS === */
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: var(--ink-950); }
+  ::-webkit-scrollbar-thumb {
+    background: var(--line);
+    border-radius: 5px;
+    border: 2px solid var(--ink-950);
+  }
+  ::-webkit-scrollbar-thumb:hover { background: var(--line-hi); }
+
+  /* === TOP MOVER ITEM === */
+  .mover-card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    transition: all 0.2s;
+  }
+  .mover-card:hover {
+    border-color: var(--line-hi);
+    transform: translateX(2px);
+  }
+  .mover-card .rank {
+    font-family: 'Instrument Serif', serif;
+    font-size: 22px;
+    color: var(--text-3);
+    font-style: italic;
+    width: 24px;
+  }
+  .mover-card .info {
+    flex: 1;
+    min-width: 0;
+  }
+  .mover-card .name {
+    font-family: 'Geist', sans-serif;
+    font-weight: 600;
+    font-size: 13px;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .mover-card .meta {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10.5px;
+    color: var(--text-3);
+    margin-top: 2px;
+  }
+  .mover-card .delta-big {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    font-weight: 600;
+  }
+
+  .movers-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 14px;
+    margin-bottom: 28px;
+  }
+  @media (max-width: 900px) { .movers-grid { grid-template-columns: 1fr; } }
+
+  .movers-section h4 {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--text-3);
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .movers-section h4::before {
+    content: '';
+    width: 14px;
+    height: 2px;
+    background: currentColor;
+    display: inline-block;
+  }
+
+  /* === SPARKLINE === */
+  .spark { overflow: visible; }
+</style>
+</head>
+<body>
+
+<div class="app-header">
+  <div class="brand">
+    <div class="brand-mark" aria-label="AlfAccurate Advisors">
+      <svg viewBox="0 0 120 90" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <defs>
+          <radialGradient id="navyGrad" cx="50%" cy="38%" r="58%">
+            <stop offset="0%" stop-color="#5B7CB4"/>
+            <stop offset="55%" stop-color="#2A3F75"/>
+            <stop offset="100%" stop-color="#17224A"/>
+          </radialGradient>
+          <linearGradient id="redGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#E63B4F"/>
+            <stop offset="100%" stop-color="#B8263A"/>
+          </linearGradient>
+        </defs>
+        <!-- Left red peak -->
+        <path d="M 4 72 Q 16 68 28 14 Q 36 40 46 72 Z" fill="url(#redGrad)"/>
+        <!-- Right red peak -->
+        <path d="M 116 72 Q 104 68 92 14 Q 84 40 74 72 Z" fill="url(#redGrad)"/>
+        <!-- Center navy peak -->
+        <path d="M 14 76 Q 34 70 44 56 Q 58 26 60 8 Q 62 26 76 56 Q 86 70 106 76 Z" fill="url(#navyGrad)"/>
+      </svg>
+    </div>
+    <div>
+      <h1><span style="color:#E63B4F">Alf</span><span style="color:var(--text)">Accurate</span> <em>Advisors</em></h1>
+      <div class="subtitle">Inflow · Outflow Dashboard · FY 25-26</div>
+    </div>
+  </div>
+  <div class="data-status" id="dataStatus">No data loaded</div>
+</div>
+
+<div class="tabs" id="tabs">
+  <div class="tab active" data-tab="input"><span class="dot"></span>Data Input</div>
+  <div class="tab" data-tab="summary"><span class="dot"></span>Summary</div>
+  <div class="tab" data-tab="monthly"><span class="dot"></span>Monthly Trends</div>
+  <div class="tab" data-tab="distributors"><span class="dot"></span>Top Distributors</div>
+  <div class="tab" data-tab="city"><span class="dot"></span>City Analysis</div>
+  <div class="tab" data-tab="dist-scheme"><span class="dot"></span>Scheme × Distributor</div>
+  <div class="tab" data-tab="rm-scheme"><span class="dot"></span>Scheme × RM</div>
+  <div class="tab" data-tab="dist-perf"><span class="dot"></span>Dist Performance</div>
+  <div class="tab" data-tab="rm-perf"><span class="dot"></span>RM Performance</div>
+</div>
+
+<div class="content" id="content"></div>
+
+<script>
+// ─── GLOBALS ───
+let inflowData = [];
+let outflowData = [];
+let computed = null;
+let baseNormalizedInflow = [];
+let baseNormalizedOutflow = [];
+let allZones = [];
+let allSalesmen = [];
+let allFYs = [];                              // sorted ascending list of FY start years
+let compareFYs = { year1: null, year2: null };
+let filters = { zone: 'All', salesman: 'All' };
+
+const SCHEMES = [
+  'AAA Budding Beasts Equity',
+  'AAA India Opportunity Plan Equity',
+  'AAA LIQUID PLAN',
+  'AAA India Equity Fund Scheme-1',
+  'AAA COUTURE',
+  'AAA SHARIAH',
+  'AAA Gems Fund'
+];
+
+const SCHEME_SHORT = {
+  'AAA Budding Beasts Equity': 'Budding Beasts',
+  'AAA India Opportunity Plan Equity': 'India Opp Plan',
+  'AAA LIQUID PLAN': 'Liquid Plan',
+  'AAA India Equity Fund Scheme-1': 'India Equity Fund',
+  'AAA COUTURE': 'Couture',
+  'AAA SHARIAH': 'Shariah',
+  'AAA Gems Fund': 'Gems Fund'
+};
+
+const MONTHS = ['Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec','Jan','Feb','Mar'];
+
+const SCHEME_CATEGORY = {
+  'AAA Budding Beasts Equity': 'depends',
+  'AAA India Opportunity Plan Equity': 'depends',
+  'AAA LIQUID PLAN': 'depends',
+  'AAA India Equity Fund Scheme-1': 'AIF',
+  'AAA COUTURE': 'depends',
+  'AAA SHARIAH': 'depends',
+  'AAA Gems Fund': 'AIF'
+};
+
+function getMonthIdx(dateStr) {
+  const d = new Date(dateStr);
+  const m = d.getMonth(); // 0-11
+  // FY: Apr(3)=0, May(4)=1, ... Mar(2)=11
+  if (m >= 3) return m - 3; // Apr=0 ... Dec=8
+  return m + 9; // Jan=9, Feb=10, Mar=11
+}
+
+function getFYStartYear(dateStr) {
+  const d = new Date(dateStr);
+  if (isNaN(d)) return null;
+  const m = d.getMonth();
+  const y = d.getFullYear();
+  // Apr–Dec → this year starts the FY; Jan–Mar → previous year starts the FY
+  return m >= 3 ? y : y - 1;
+}
+
+// Month label like "Apr'25" based on FY start year and FY-month index (0=Apr..11=Mar)
+function monthLabel(fyStart, monthIdx) {
+  if (fyStart === null || fyStart === undefined) return MONTHS[monthIdx];
+  const calYear = monthIdx >= 9 ? fyStart + 1 : fyStart;
+  return MONTHS[monthIdx] + "'" + String(calYear).slice(-2);
+}
+
+function fyLabel(fyStart) {
+  if (fyStart === null || fyStart === undefined) return '—';
+  return "FY " + String(fyStart).slice(-2) + "-" + String(fyStart + 1).slice(-2);
+}
+
+function pctDelta(curr, prev) {
+  if (prev === 0 && curr === 0) return { txt: '—', cls: '' };
+  if (prev === 0) return { txt: 'new', cls: 'pos' };
+  const d = (curr - prev) / Math.abs(prev) * 100;
+  const sign = d > 0 ? '+' : '';
+  return { txt: sign + d.toFixed(1) + '%', cls: d > 0 ? 'pos' : d < 0 ? 'neg' : '' };
+}
+
+// ─── SPARKLINE ───
+function sparkline(values, opts = {}) {
+  const { color = '#F59E0B', w = 94, h = 32, showDot = true, showArea = true } = opts;
+  if (!values || values.length === 0) return '';
+  const max = Math.max(...values), min = Math.min(...values, 0);
+  const range = (max - min) || 1;
+  const step = w / Math.max(values.length - 1, 1);
+  const pts = values.map((v, i) => {
+    const x = i * step;
+    const y = h - ((v - min) / range) * (h - 4) - 2;
+    return [x, y];
+  });
+  const ptStr = pts.map(p => `${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(' ');
+  const last = pts[pts.length - 1];
+  const id = 'g' + Math.random().toString(36).slice(2, 8);
+  return `<svg class="spark" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">
+    <defs>
+      <linearGradient id="${id}" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="${color}" stop-opacity="0.4"/>
+        <stop offset="100%" stop-color="${color}" stop-opacity="0"/>
+      </linearGradient>
+    </defs>
+    ${showArea ? `<polyline points="0,${h} ${ptStr} ${last[0].toFixed(1)},${h}" fill="url(#${id})" stroke="none"/>` : ''}
+    <polyline points="${ptStr}" fill="none" stroke="${color}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    ${showDot ? `<circle cx="${last[0].toFixed(1)}" cy="${last[1].toFixed(1)}" r="2.2" fill="${color}"/>` : ''}
+  </svg>`;
+}
+
+// ─── HEATMAP ───
+// Returns inline style for a cell heat based on value relative to max absolute
+function heatStyle(value, maxAbs, rgb = '163, 230, 53') {
+  if (!maxAbs || value === 0) return '';
+  const intensity = Math.min(Math.abs(value) / maxAbs, 1);
+  return `--heat:${intensity.toFixed(3)};--heat-rgb:${rgb};`;
+}
+function heatCls(value, typeCls) {
+  if (value === 0) return typeCls;
+  if (typeCls === 'pos' || typeCls === '' && value > 0) return typeCls + ' heat';
+  if (typeCls === 'neg' || typeCls === '' && value < 0) return typeCls + ' heat';
+  return typeCls;
+}
+
+// ─── CSV EXPORT ───
+function exportTableCSV(tableEl, filename = 'export.csv') {
+  if (!tableEl) return;
+  const rows = [...tableEl.querySelectorAll('tr')];
+  const csv = rows.map(r => [...r.querySelectorAll('th, td')].map(c => {
+    const t = (c.innerText || c.textContent).replace(/\s+/g, ' ').trim();
+    return /[",\n]/.test(t) ? `"${t.replace(/"/g, '""')}"` : t;
+  }).join(',')).join('\n');
+  const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function exportNamedTable(tableId, filename) {
+  const t = document.getElementById(tableId);
+  if (t) exportTableCSV(t, filename);
+}
+
+// ─── TABLE SEARCH ───
+function filterTableByText(tableId, query) {
+  const t = document.getElementById(tableId);
+  if (!t) return;
+  const q = (query || '').trim().toLowerCase();
+  const rows = t.querySelectorAll('tbody tr');
+  let visible = 0;
+  rows.forEach(r => {
+    if (r.classList.contains('total-row')) return;
+    const text = r.textContent.toLowerCase();
+    const match = !q || text.includes(q);
+    r.style.display = match ? '' : 'none';
+    if (match) visible++;
+  });
+  const counter = document.getElementById(tableId + '_count');
+  if (counter) counter.textContent = visible;
+}
+
+// ─── TABLE TOOLS HTML ───
+function tableTools(tableId, exportName, placeholder = 'Search…') {
+  return `
+    <div class="table-tools">
+      <input class="text-input" type="text" placeholder="${placeholder}" oninput="filterTableByText('${tableId}', this.value)">
+      <span class="filter-label"><span id="${tableId}_count">—</span> rows</span>
+      <div class="right">
+        <button class="btn ghost small" onclick="exportNamedTable('${tableId}', '${exportName}')">⬇ Export CSV</button>
+      </div>
+    </div>
+  `;
+}
+
+function fmt(n, dec=2) {
+  if (n === 0) return '0.00';
+  if (Math.abs(n) < 0.001) return n.toFixed(4);
+  return n.toFixed(dec);
+}
+
+function fmtCr(n) {
+  return '₹' + fmt(n) + ' Cr';
+}
+
+function pct(n) {
+  return (n * 100).toFixed(1) + '%';
+}
+
+function naturalSort(a, b) {
+  return a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
+}
+
+// ─── PARSE CSV ───
+function parseCSV(text) {
+  // Strip BOM and weird whitespace
+  text = text.replace(/^\uFEFF/, '').replace(/^\u00EF\u00BB\u00BF/, '').trim();
+  
+  const result = Papa.parse(text, { header: true, skipEmptyLines: true, dynamicTyping: false });
+  
+  // Clean headers: trim, remove non-breaking spaces, normalize
+  return result.data.map(row => {
+    const clean = {};
+    for (const [k, v] of Object.entries(row)) {
+      const cleanKey = k.replace(/[\u00A0\u200B\uFEFF]/g, ' ').trim();
+      clean[cleanKey] = typeof v === 'string' ? v.trim() : v;
+    }
+    return clean;
+  });
+}
+
+function parseNum(val) {
+  if (val === null || val === undefined || val === '') return 0;
+  if (typeof val === 'number') return val;
+  // Remove commas, currency symbols, spaces
+  const cleaned = String(val).replace(/[,₹\s]/g, '').trim();
+  const n = parseFloat(cleaned);
+  return isNaN(n) ? 0 : n;
+}
+
+function findCol(row, patterns) {
+  // Find the first column key that matches any of the patterns
+  for (const k of Object.keys(row)) {
+    const kl = k.toLowerCase().replace(/[\s_\-]+/g, '');
+    for (const p of patterns) {
+      if (kl.includes(p)) return k;
+    }
+  }
+  return null;
+}
+
+function normalizeRow(row, type) {
+  // --- AMOUNT (try multiple strategies) ---
+  let amtCrs = 0;
+  
+  // Strategy 1: "Amt in Crs" column (most reliable, small number)
+  const crsCol = findCol(row, ['amtincr', 'crs', 'crore']);
+  if (crsCol) {
+    amtCrs = parseNum(row[crsCol]);
+  }
+  
+  // Strategy 2: "Inflow amount" / "Outflow amount" column
+  if (amtCrs === 0) {
+    const amtPatterns = type === 'inflow' ? ['inflowamount', 'infowamt'] : ['outflowamount', 'outfowamt'];
+    const amtCol = findCol(row, amtPatterns);
+    if (amtCol) {
+      amtCrs = parseNum(row[amtCol]) / 10000000;
+    }
+  }
+  
+  // Strategy 3: Try any column with "amount" in it
+  if (amtCrs === 0) {
+    const amtCol = findCol(row, ['amount']);
+    if (amtCol) {
+      amtCrs = parseNum(row[amtCol]) / 10000000;
+    }
+  }
+  
+  // --- SCHEME ---
+  let scheme = '';
+  const schemeCol = findCol(row, ['scheme']);
+  if (schemeCol) scheme = String(row[schemeCol] || '').trim();
+  
+  // --- CATEGORY (PMS/AIF) ---
+  let cat = '';
+  const catCol = findCol(row, ['pms/aif', 'pms', 'category', 'type']);
+  if (catCol) {
+    const val = String(row[catCol] || '').trim().toUpperCase();
+    if (val === 'PMS' || val === 'AIF') cat = val;
+  }
+  // If column name is "PMS/AIF", get the value directly
+  if (!cat) {
+    for (const k of Object.keys(row)) {
+      if (k.trim() === 'PMS/AIF' || k.trim().toLowerCase() === 'pms/aif') {
+        cat = String(row[k] || '').trim().toUpperCase();
+        break;
+      }
+    }
+  }
+  
+  // --- DISTRIBUTOR ---
+  let dist = '';
+  const distCol = findCol(row, ['nameofdistributor', 'distributor']);
+  if (distCol) {
+    // Make sure it's the distributor name column, not the RM column
+    const kl = distCol.toLowerCase();
+    if (!kl.includes('rm') || kl.includes('name of dist')) {
+      dist = String(row[distCol] || '').trim();
+    }
+  }
+  // Fallback: try exact column names
+  if (!dist) {
+    for (const k of Object.keys(row)) {
+      const kt = k.trim();
+      if (kt === 'Name of Distributor' || kt === 'Distributor') {
+        dist = String(row[k] || '').trim();
+        break;
+      }
+    }
+  }
+  
+  // --- AAA RM ---
+  let rm = '';
+  for (const k of Object.keys(row)) {
+    const kt = k.trim();
+    const kl = kt.toLowerCase().replace(/[\s_\-]+/g, '');
+    if (kl === 'aaarm' || kt === 'AAA RM' || kt === 'AAARM') {
+      rm = String(row[k] || '').trim();
+      break;
+    }
+  }
+  
+  // --- DISTRIBUTOR RM NAME (RM 1, RM 2, etc.) ---
+  let distRM = '';
+  for (const k of Object.keys(row)) {
+    const kl = k.toLowerCase();
+    if ((kl.includes('distributor') && kl.includes('rm')) || kl === 'distributor- rm name') {
+      distRM = String(row[k] || '').trim();
+      break;
+    }
+  }
+  
+  // --- CITY / LOCATION ---
+  let city = '';
+  const cityCol = findCol(row, ['location', 'city']);
+  if (cityCol) city = String(row[cityCol] || '').trim();
+
+  // --- ZONE ---
+  let zone = '';
+  for (const k of Object.keys(row)) {
+    if (k.trim().toLowerCase() === 'zone') {
+      zone = String(row[k] || '').trim();
+      break;
+    }
+  }
+
+  // --- SALESMAN (AAA Sales member) ---
+  let salesman = '';
+  for (const k of Object.keys(row)) {
+    const kt = k.trim().toLowerCase();
+    if (kt === 'aaa sales member' || kt === 'salesman' || kt === 'sales member' || kt === 'sales man' || kt.includes('sales member') || kt.includes('salesman')) {
+      salesman = String(row[k] || '').trim();
+      break;
+    }
+  }
+  
+  // --- DATE ---
+  let date = '';
+  const dateCol = findCol(row, ['date']);
+  if (dateCol) date = String(row[dateCol] || '').trim();
+  const fyStart = getFYStartYear(date);
+  
+  // --- CLIENT ---
+  let clientCode = '', clientName = '';
+  const codeCol = findCol(row, ['clientcode', 'code']);
+  const nameCol = findCol(row, ['clientname']);
+  if (codeCol) clientCode = String(row[codeCol] || '').trim();
+  if (nameCol) clientName = String(row[nameCol] || '').trim();
+
+  return {
+    clientCode,
+    clientName,
+    date,
+    fyStart,
+    category: cat,
+    distributor: dist,
+    city,
+    zone,
+    salesman,
+    distRM,
+    aaaRM: rm,
+    scheme,
+    type,
+    amount: amtCrs * 10000000,
+    amtCrs
+  };
+}
+
+// ─── COMPUTE ALL ───
+function computeAll() {
+  if (inflowData.length === 0 && outflowData.length === 0) { computed = null; return; }
+
+  baseNormalizedInflow = inflowData.map(r => normalizeRow(r, 'inflow'));
+  baseNormalizedOutflow = outflowData.map(r => normalizeRow(r, 'outflow'));
+
+  // Build zone + salesman + FY lists from all data (before filtering)
+  const zoneSet = new Set(), smSet = new Set(), fySet = new Set();
+  baseNormalizedInflow.concat(baseNormalizedOutflow).forEach(r => {
+    if (r.zone) zoneSet.add(r.zone);
+    if (r.salesman) smSet.add(r.salesman);
+    if (r.fyStart !== null && r.fyStart !== undefined) fySet.add(r.fyStart);
+  });
+  allZones = [...zoneSet].sort();
+  allSalesmen = [...smSet].sort();
+  allFYs = [...fySet].sort((a,b) => a - b);
+
+  // Default: compare two most recent FYs; if only one FY, use it for both
+  if (allFYs.length >= 2) {
+    compareFYs.year1 = allFYs[allFYs.length - 2];
+    compareFYs.year2 = allFYs[allFYs.length - 1];
+  } else if (allFYs.length === 1) {
+    compareFYs.year1 = allFYs[0];
+    compareFYs.year2 = allFYs[0];
+  }
+
+  aggregate();
+}
+
+function matchFilters(r) {
+  return (filters.zone === 'All' || r.zone === filters.zone) &&
+         (filters.salesman === 'All' || r.salesman === filters.salesman);
+}
+
+function aggregate() {
+  const allInflow = baseNormalizedInflow.filter(matchFilters);
+  const allOutflow = baseNormalizedOutflow.filter(matchFilters);
+
+  const fyList = allFYs.length ? allFYs : [null];
+  const emptyFYScalars = () => { const o = {}; fyList.forEach(fy => o[fy] = { inflow: 0, outflow: 0 }); return o; };
+  const emptyFYMonthly = () => { const o = {}; fyList.forEach(fy => o[fy] = { inflow: new Array(12).fill(0), outflow: new Array(12).fill(0) }); return o; };
+  const emptyFYDist = () => { const o = {}; fyList.forEach(fy => o[fy] = { pmsIn: 0, aifIn: 0, totalIn: 0, totalOut: 0, txCount: 0 }); return o; };
+  const emptyFYCity = () => { const o = {}; fyList.forEach(fy => o[fy] = { inflow: 0, outflow: 0, monthlyIn: new Array(12).fill(0), monthlyOut: new Array(12).fill(0) }); return o; };
+  const emptyFYPerf = () => { const o = {}; fyList.forEach(fy => o[fy] = { totalIn: 0, totalOut: 0, monthlyIn: new Array(12).fill(0), monthlyOut: new Array(12).fill(0), txCount: 0 }); return o; };
+
+  // --- PRODUCT & CATEGORY SUMMARY (per FY) ---
+  const productSummary = {};
+  SCHEMES.forEach(s => { productSummary[s] = emptyFYScalars(); });
+  const categorySummary = { PMS: emptyFYScalars(), AIF: emptyFYScalars() };
+
+  allInflow.forEach(r => {
+    const fy = r.fyStart;
+    if (productSummary[r.scheme] && productSummary[r.scheme][fy]) productSummary[r.scheme][fy].inflow += r.amtCrs;
+    if (categorySummary[r.category] && categorySummary[r.category][fy]) categorySummary[r.category][fy].inflow += r.amtCrs;
+  });
+  allOutflow.forEach(r => {
+    const fy = r.fyStart;
+    if (productSummary[r.scheme] && productSummary[r.scheme][fy]) productSummary[r.scheme][fy].outflow += r.amtCrs;
+    if (categorySummary[r.category] && categorySummary[r.category][fy]) categorySummary[r.category][fy].outflow += r.amtCrs;
+  });
+
+  // --- MONTHLY BY CATEGORY / PRODUCT (per FY) ---
+  const monthlyByCategory = { PMS: emptyFYMonthly(), AIF: emptyFYMonthly() };
+  const monthlyByProduct = {};
+  SCHEMES.forEach(s => { monthlyByProduct[s] = emptyFYMonthly(); });
+
+  allInflow.forEach(r => {
+    const mi = getMonthIdx(r.date), fy = r.fyStart;
+    if (mi < 0 || mi >= 12) return;
+    if (monthlyByCategory[r.category] && monthlyByCategory[r.category][fy]) monthlyByCategory[r.category][fy].inflow[mi] += r.amtCrs;
+    if (monthlyByProduct[r.scheme] && monthlyByProduct[r.scheme][fy]) monthlyByProduct[r.scheme][fy].inflow[mi] += r.amtCrs;
+  });
+  allOutflow.forEach(r => {
+    const mi = getMonthIdx(r.date), fy = r.fyStart;
+    if (mi < 0 || mi >= 12) return;
+    if (monthlyByCategory[r.category] && monthlyByCategory[r.category][fy]) monthlyByCategory[r.category][fy].outflow[mi] += r.amtCrs;
+    if (monthlyByProduct[r.scheme] && monthlyByProduct[r.scheme][fy]) monthlyByProduct[r.scheme][fy].outflow[mi] += r.amtCrs;
+  });
+
+  // --- TOP DISTRIBUTORS (per FY) ---
+  const distData = {};
+  allInflow.forEach(r => {
+    if (!r.distributor) return;
+    if (!distData[r.distributor]) distData[r.distributor] = emptyFYDist();
+    const b = distData[r.distributor][r.fyStart]; if (!b) return;
+    b.totalIn += r.amtCrs; b.txCount++;
+    if (r.category === 'PMS') b.pmsIn += r.amtCrs;
+    if (r.category === 'AIF') b.aifIn += r.amtCrs;
+  });
+  allOutflow.forEach(r => {
+    if (!r.distributor) return;
+    if (!distData[r.distributor]) distData[r.distributor] = emptyFYDist();
+    const b = distData[r.distributor][r.fyStart]; if (!b) return;
+    b.totalOut += r.amtCrs; b.txCount++;
+  });
+
+  // --- CITY ANALYSIS (per FY) ---
+  const cityData = {};
+  allInflow.forEach(r => {
+    if (!r.city) return;
+    if (!cityData[r.city]) cityData[r.city] = emptyFYCity();
+    const b = cityData[r.city][r.fyStart]; if (!b) return;
+    b.inflow += r.amtCrs;
+    const mi = getMonthIdx(r.date);
+    if (mi >= 0 && mi < 12) b.monthlyIn[mi] += r.amtCrs;
+  });
+  allOutflow.forEach(r => {
+    if (!r.city) return;
+    if (!cityData[r.city]) cityData[r.city] = emptyFYCity();
+    const b = cityData[r.city][r.fyStart]; if (!b) return;
+    b.outflow += r.amtCrs;
+    const mi = getMonthIdx(r.date);
+    if (mi >= 0 && mi < 12) b.monthlyOut[mi] += r.amtCrs;
+  });
+
+  // --- DISTRIBUTOR x SCHEME MONTHLY (per FY) ---
+  const distSchemeMonthly = {};
+  allInflow.forEach(r => {
+    if (!r.distributor || !r.scheme) return;
+    if (!distSchemeMonthly[r.distributor]) distSchemeMonthly[r.distributor] = {};
+    if (!distSchemeMonthly[r.distributor][r.scheme]) distSchemeMonthly[r.distributor][r.scheme] = emptyFYMonthly();
+    const b = distSchemeMonthly[r.distributor][r.scheme][r.fyStart]; if (!b) return;
+    const mi = getMonthIdx(r.date);
+    if (mi >= 0 && mi < 12) b.inflow[mi] += r.amtCrs;
+  });
+  allOutflow.forEach(r => {
+    if (!r.distributor || !r.scheme) return;
+    if (!distSchemeMonthly[r.distributor]) distSchemeMonthly[r.distributor] = {};
+    if (!distSchemeMonthly[r.distributor][r.scheme]) distSchemeMonthly[r.distributor][r.scheme] = emptyFYMonthly();
+    const b = distSchemeMonthly[r.distributor][r.scheme][r.fyStart]; if (!b) return;
+    const mi = getMonthIdx(r.date);
+    if (mi >= 0 && mi < 12) b.outflow[mi] += r.amtCrs;
+  });
+
+  // --- RM x SCHEME MONTHLY (per FY) ---
+  const rmSchemeMonthly = {};
+  allInflow.forEach(r => {
+    if (!r.distRM || !r.scheme) return;
+    if (!rmSchemeMonthly[r.distRM]) rmSchemeMonthly[r.distRM] = {};
+    if (!rmSchemeMonthly[r.distRM][r.scheme]) rmSchemeMonthly[r.distRM][r.scheme] = emptyFYMonthly();
+    const b = rmSchemeMonthly[r.distRM][r.scheme][r.fyStart]; if (!b) return;
+    const mi = getMonthIdx(r.date);
+    if (mi >= 0 && mi < 12) b.inflow[mi] += r.amtCrs;
+  });
+  allOutflow.forEach(r => {
+    if (!r.distRM || !r.scheme) return;
+    if (!rmSchemeMonthly[r.distRM]) rmSchemeMonthly[r.distRM] = {};
+    if (!rmSchemeMonthly[r.distRM][r.scheme]) rmSchemeMonthly[r.distRM][r.scheme] = emptyFYMonthly();
+    const b = rmSchemeMonthly[r.distRM][r.scheme][r.fyStart]; if (!b) return;
+    const mi = getMonthIdx(r.date);
+    if (mi >= 0 && mi < 12) b.outflow[mi] += r.amtCrs;
+  });
+
+  // --- DIST PERFORMANCE (per FY) ---
+  const distPerf = {};
+  allInflow.forEach(r => {
+    if (!r.distributor) return;
+    if (!distPerf[r.distributor]) distPerf[r.distributor] = emptyFYPerf();
+    const b = distPerf[r.distributor][r.fyStart]; if (!b) return;
+    b.totalIn += r.amtCrs; b.txCount++;
+    const mi = getMonthIdx(r.date);
+    if (mi >= 0 && mi < 12) b.monthlyIn[mi] += r.amtCrs;
+  });
+  allOutflow.forEach(r => {
+    if (!r.distributor) return;
+    if (!distPerf[r.distributor]) distPerf[r.distributor] = emptyFYPerf();
+    const b = distPerf[r.distributor][r.fyStart]; if (!b) return;
+    b.totalOut += r.amtCrs; b.txCount++;
+    const mi = getMonthIdx(r.date);
+    if (mi >= 0 && mi < 12) b.monthlyOut[mi] += r.amtCrs;
+  });
+
+  // --- RM PERFORMANCE (per FY) ---
+  const rmPerf = {};
+  allInflow.forEach(r => {
+    if (!r.distRM) return;
+    if (!rmPerf[r.distRM]) rmPerf[r.distRM] = emptyFYPerf();
+    const b = rmPerf[r.distRM][r.fyStart]; if (!b) return;
+    b.totalIn += r.amtCrs; b.txCount++;
+    const mi = getMonthIdx(r.date);
+    if (mi >= 0 && mi < 12) b.monthlyIn[mi] += r.amtCrs;
+  });
+  allOutflow.forEach(r => {
+    if (!r.distRM) return;
+    if (!rmPerf[r.distRM]) rmPerf[r.distRM] = emptyFYPerf();
+    const b = rmPerf[r.distRM][r.fyStart]; if (!b) return;
+    b.totalOut += r.amtCrs; b.txCount++;
+    const mi = getMonthIdx(r.date);
+    if (mi >= 0 && mi < 12) b.monthlyOut[mi] += r.amtCrs;
+  });
+  
+  computed = {
+    productSummary,
+    categorySummary,
+    monthlyByCategory,
+    monthlyByProduct,
+    distData,
+    cityData,
+    distSchemeMonthly,
+    rmSchemeMonthly,
+    rmPerf,
+    distPerf,
+    inflowCount: allInflow.length,
+    outflowCount: allOutflow.length,
+    totalInflow: allInflow.reduce((s,r) => s + r.amtCrs, 0),
+    totalOutflow: allOutflow.reduce((s,r) => s + r.amtCrs, 0),
+    totalInflowByFY: (() => { const o = {}; fyList.forEach(fy => o[fy] = 0); allInflow.forEach(r => { if (o[r.fyStart] !== undefined) o[r.fyStart] += r.amtCrs; }); return o; })(),
+    totalOutflowByFY: (() => { const o = {}; fyList.forEach(fy => o[fy] = 0); allOutflow.forEach(r => { if (o[r.fyStart] !== undefined) o[r.fyStart] += r.amtCrs; }); return o; })()
+  };
+  
+  const status = document.getElementById('dataStatus');
+  status.textContent = `${allInflow.length.toLocaleString()} inflows · ${allOutflow.length.toLocaleString()} outflows`;
+  status.classList.add('loaded');
+}
+
+// ─── FILTER BAR (Zone + Salesman + FY Compare) ───
+function renderFilterBar() {
+  if (!computed) return '';
+  const activeCount = (filters.zone !== 'All' ? 1 : 0) + (filters.salesman !== 'All' ? 1 : 0);
+  const showFYCompare = allFYs.length >= 2;
+  const fyOpts = fy => allFYs.map(y => `<option value="${y}" ${fy===y?'selected':''}>${fyLabel(y)}</option>`).join('');
+  return `
+    <div class="filter-bar sticky">
+      <span class="filter-label">Filter</span>
+      ${allZones.length ? `<span class="filter-label" style="margin-left:4px">Zone</span>
+      <select onchange="setFilter('zone', this.value)">
+        <option value="All">All Zones</option>
+        ${allZones.map(z => `<option value="${z}" ${filters.zone===z?'selected':''}>${z}</option>`).join('')}
+      </select>` : ''}
+      ${allSalesmen.length ? `<span class="filter-label">Salesman</span>
+      <select onchange="setFilter('salesman', this.value)">
+        <option value="All">All Salesmen</option>
+        ${allSalesmen.map(s => `<option value="${s}" ${filters.salesman===s?'selected':''}>${s}</option>`).join('')}
+      </select>` : ''}
+      ${showFYCompare ? `
+        <span class="filter-sep"></span>
+        <span class="filter-label">Compare</span>
+        <select onchange="setCompareFY('year1', parseInt(this.value))">${fyOpts(compareFYs.year1)}</select>
+        <span style="color:var(--text-3);font-size:12px;font-family:'JetBrains Mono',monospace">vs</span>
+        <select onchange="setCompareFY('year2', parseInt(this.value))">${fyOpts(compareFYs.year2)}</select>
+      ` : ''}
+      ${activeCount > 0 ? `<button class="btn ghost small" onclick="clearFilters()">✕ Clear (${activeCount})</button>
+      <span style="font-size:11.5px;color:var(--lime);font-family:'JetBrains Mono',monospace">${computed.inflowCount.toLocaleString()} · ${computed.outflowCount.toLocaleString()} rows</span>` : ''}
+    </div>
+  `;
+}
+
+function setFilter(key, val) {
+  filters[key] = val;
+  aggregate();
+  render();
+}
+
+function clearFilters() {
+  filters = { zone: 'All', salesman: 'All' };
+  aggregate();
+  render();
+}
+
+function setCompareFY(key, val) {
+  compareFYs[key] = val;
+  render();
+}
+
+// Helper: compute Δ% between two values and format as HTML cell
+function deltaCell(curr, prev) {
+  const d = pctDelta(curr, prev);
+  return `<td class="dcol ${d.cls}">${d.txt}</td>`;
+}
+
+function isSingleFY() { return compareFYs.year1 === compareFYs.year2; }
+
+// ─── RENDER TABS ───
+let currentTab = 'input';
+
+document.getElementById('tabs').addEventListener('click', e => {
+  const tab = e.target.closest('.tab');
+  if (!tab) return;
+  currentTab = tab.dataset.tab;
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  tab.classList.add('active');
+  render();
+});
+
+function initTableCounts() {
+  document.querySelectorAll('[id$="_count"]').forEach(span => {
+    const tid = span.id.replace(/_count$/, '');
+    const t = document.getElementById(tid);
+    if (t) span.textContent = t.querySelectorAll('tbody tr:not(.total-row)').length;
+  });
+}
+
+function render() {
+  const c = document.getElementById('content');
+
+  if (currentTab === 'input') renderInput(c);
+  else if (!computed) {
+    c.innerHTML = `<div class="empty-state"><h3>No data loaded</h3><p>Head to the <strong style="color:var(--saffron)">Data Input</strong> tab to upload your XLSX or paste CSV.</p></div>`;
+    return;
+  }
+  else if (currentTab === 'summary') renderSummary(c);
+  else if (currentTab === 'monthly') renderMonthly(c);
+  else if (currentTab === 'distributors') renderDistributors(c);
+  else if (currentTab === 'city') renderCity(c);
+  else if (currentTab === 'dist-scheme') renderDistScheme(c);
+  else if (currentTab === 'rm-scheme') renderRMScheme(c);
+  else if (currentTab === 'dist-perf') renderDistPerf(c);
+  else if (currentTab === 'rm-perf') renderRMPerf(c);
+
+  // After innerHTML is set, initialize all row counters
+  requestAnimationFrame(initTableCounts);
+}
+
+// ─── INPUT TAB ───
+function renderInput(c) {
+  c.innerHTML = `
+    <div class="upload-zone">
+      <h3>Upload or paste <em>transaction data</em></h3>
+      <p>Upload the original XLSX (auto-reads "Net Inflow" & "Net Outflow" sheets) — or paste CSV below.</p>
+      <div class="upload-row">
+        <label class="btn primary" for="xlsxFile">⬆ Upload XLSX · both sheets</label>
+        <input type="file" id="xlsxFile" accept=".xlsx,.xls,.xlsm">
+      </div>
+      <p style="margin-top:18px;color:var(--text-3);font-size:11.5px;text-transform:uppercase;letter-spacing:1.5px;font-family:'JetBrains Mono',monospace">— or separate CSVs —</p>
+      <div class="upload-row" style="margin-top:10px">
+        <label class="btn ghost" for="inflowFile">Inflow CSV</label>
+        <input type="file" id="inflowFile" accept=".csv,.tsv,.txt">
+        <label class="btn ghost" for="outflowFile">Outflow CSV</label>
+        <input type="file" id="outflowFile" accept=".csv,.tsv,.txt">
+        <button class="btn ghost" onclick="loadSampleData()">Load Sample</button>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div>
+        <div class="section-title accent-lime"><div class="swatch"></div><h2>Net Inflow <em>data</em></h2><span class="tag">CSV</span></div>
+        <textarea id="inflowText" placeholder="Client Code,Client Name,Date,PMS/AIF,Name of Distributor,Location,Distributor- RM Name,AAA RM,SCHEMENAME,Transaction,Inflow amount,Amt in Crs&#10;Code 1,Client 1,2025-04-01,PMS,D1,Pune,RM 1,GA-SB,AAA Budding Beasts Equity,Inflow,3000000,0.3">${inflowData.length > 0 ? '(' + inflowData.length + ' rows loaded)' : ''}</textarea>
+      </div>
+      <div>
+        <div class="section-title accent-crimson"><div class="swatch"></div><h2>Net Outflow <em>data</em></h2><span class="tag">CSV</span></div>
+        <textarea id="outflowText" placeholder="Client Code,Client Name,Date,PMS/AIF,Name of Distributor,Location,Distributor- RM Name,AAARM,SCHEMENAME,Transaction,Outflow amount,Amt in Crs&#10;Client 1111,Client 1111,2025-04-02,PMS,D24,Mumbai,RM 110,SB,AAA Budding Beasts Equity,Outflow,1500000,0.15">${outflowData.length > 0 ? '(' + outflowData.length + ' rows loaded)' : ''}</textarea>
+      </div>
+    </div>
+
+    <div style="text-align:center;margin-top:20px">
+      <button class="btn primary" style="padding:14px 42px;font-size:14.5px" onclick="processData()">⚡ Process & Generate Reports</button>
+    </div>
+
+    ${computed ? `<div class="status-bar" style="margin-top:28px">Data processed — ${computed.inflowCount} inflows (${fmtCr(computed.totalInflow)}) · ${computed.outflowCount} outflows (${fmtCr(computed.totalOutflow)}). Switch tabs to explore.</div>
+    <div class="section-title accent-saffron"><div class="swatch"></div><h2>Parsed <em>sample</em></h2><span class="tag">First 5 inflow rows</span></div>
+    <div class="table-wrap"><table><thead><tr><th>Date</th><th>PMS/AIF</th><th>Distributor</th><th>City</th><th>Dist RM</th><th>AAA RM</th><th>Scheme</th><th>Amt (₹ Crs)</th></tr></thead><tbody>
+    ${inflowData.slice(0,5).map(r => {
+      const n = normalizeRow(r, 'inflow');
+      return '<tr><td>'+n.date+'</td><td>'+(n.category==='PMS'?'<span class="badge pms">PMS</span>':'<span class="badge aif">AIF</span>')+'</td><td>'+n.distributor+'</td><td>'+n.city+'</td><td>'+n.distRM+'</td><td>'+n.aaaRM+'</td><td>'+n.scheme+'</td><td class="pos">'+fmt(n.amtCrs)+'</td></tr>';
+    }).join('')}
+    </tbody></table></div>
+    <div class="section-title"><div class="swatch"></div><h2>Debug <em>columns</em></h2><span class="tag">Detected headers</span></div>
+    <div style="background:var(--surface2);border:1px solid var(--line);border-radius:10px;padding:14px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-2);word-break:break-all;margin-bottom:12px"><strong style="color:var(--saffron)">Inflow:</strong> ${inflowData.length > 0 ? Object.keys(inflowData[0]).map(k => '"'+k+'"').join(' · ') : 'No data'}</div>
+    <div style="background:var(--surface2);border:1px solid var(--line);border-radius:10px;padding:14px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-2);word-break:break-all"><strong style="color:var(--crimson)">Outflow:</strong> ${outflowData.length > 0 ? Object.keys(outflowData[0]).map(k => '"'+k+'"').join(' · ') : 'No data'}</div>` : ''}
+  `;
+  
+  document.getElementById('xlsxFile').addEventListener('change', e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      try {
+        const data = new Uint8Array(ev.target.result);
+        const wb = XLSX.read(data, { type: 'array', cellDates: true });
+        
+        // Find inflow sheet
+        const inflowSheet = wb.SheetNames.find(n => n.toLowerCase().includes('inflow')) || wb.SheetNames[0];
+        const outflowSheet = wb.SheetNames.find(n => n.toLowerCase().includes('outflow')) || wb.SheetNames[1];
+        
+        if (inflowSheet) {
+          inflowData = XLSX.utils.sheet_to_json(wb.Sheets[inflowSheet], { defval: '' });
+          // Convert dates to strings
+          inflowData = inflowData.map(row => {
+            const clean = {};
+            for (const [k, v] of Object.entries(row)) {
+              if (v instanceof Date) {
+                clean[k.trim()] = v.toISOString().split('T')[0];
+              } else {
+                clean[k.trim()] = v;
+              }
+            }
+            return clean;
+          });
+        }
+        
+        if (outflowSheet && outflowSheet !== inflowSheet) {
+          outflowData = XLSX.utils.sheet_to_json(wb.Sheets[outflowSheet], { defval: '' });
+          outflowData = outflowData.map(row => {
+            const clean = {};
+            for (const [k, v] of Object.entries(row)) {
+              if (v instanceof Date) {
+                clean[k.trim()] = v.toISOString().split('T')[0];
+              } else {
+                clean[k.trim()] = v;
+              }
+            }
+            return clean;
+          });
+        }
+        
+        computeAll();
+        render();
+      } catch(err) {
+        alert('Error reading XLSX: ' + err.message);
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  });
+  
+  document.getElementById('inflowFile').addEventListener('change', e => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = ev => {
+        inflowData = parseCSV(ev.target.result);
+        document.getElementById('inflowText').value = '(' + inflowData.length + ' rows loaded from ' + file.name + ')';
+      };
+      reader.readAsText(file);
+    }
+  });
+  
+  document.getElementById('outflowFile').addEventListener('change', e => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = ev => {
+        outflowData = parseCSV(ev.target.result);
+        document.getElementById('outflowText').value = '(' + outflowData.length + ' rows loaded from ' + file.name + ')';
+      };
+      reader.readAsText(file);
+    }
+  });
+}
+
+function processData() {
+  const it = document.getElementById('inflowText').value;
+  const ot = document.getElementById('outflowText').value;
+  
+  if (it && !it.startsWith('(')) inflowData = parseCSV(it);
+  if (ot && !ot.startsWith('(')) outflowData = parseCSV(ot);
+  
+  computeAll();
+  render();
+}
+
+function loadSampleData() {
+  // Generate sample inflow data
+  const sampleInflow = `Client Code,Client Name,Date,PMS/AIF,Name of Distributor,Location,Distributor- RM Name,AAA RM,SCHEMENAME,Transaction,Inflow amount,Amt in Crs
+Code 1,Client 1,2025-04-01,PMS,D1,Pune,RM 1,GA-SB,AAA Budding Beasts Equity,Inflow,3000000,0.3
+Code 2,Client 2,2025-04-01,PMS,D2,Bangalore,RM 2,RK-SB,AAA India Opportunity Plan Equity,Inflow,1000000,0.1
+Code 3,Client 3,2025-04-01,PMS,D2,Bangalore,RM 2,RK-SB,AAA LIQUID PLAN,Inflow,1500000,0.15
+Code 4,Client 4,2025-04-02,AIF,D3,Gurgaon,RM 3,GA-SB,AAA India Equity Fund Scheme-1,Inflow,10000000,1
+Code 5,Client 5,2025-04-02,PMS,D4,Madurai,RM 4,GA-SB,AAA India Opportunity Plan Equity,Inflow,2500000,0.25
+Code 6,Client 6,2025-04-03,AIF,D3,Gurgaon,RM 5,GA-SB,AAA India Equity Fund Scheme-1,Inflow,2500000,0.25
+Code 7,Client 7,2025-04-04,AIF,D4,Chennai,RM 6,GA-SB,AAA India Equity Fund Scheme-1,Inflow,40000000,4
+Code 8,Client 8,2025-04-04,PMS,D4,Mumbai,RM 7,GA-SB,AAA India Opportunity Plan Equity,Inflow,10000000,1
+Code 9,Client 9,2025-04-04,PMS,D5,Kolkata,RM 8,SB,AAA India Opportunity Plan Equity,Inflow,6666000,0.6666
+Code 10,Client 10,2025-04-04,PMS,D5,Kolkata,RM 8,SB,AAA LIQUID PLAN,Inflow,13334000,1.3334
+Code 11,Client 11,2025-04-04,PMS,D2,Bangalore,RM 9,RK-SB,AAA India Opportunity Plan Equity,Inflow,1500000,0.15
+Code 12,Client 12,2025-04-04,PMS,D6,Delhi,RM 10,SB,AAA India Opportunity Plan Equity,Inflow,2000000,0.2
+Code 13,Client 13,2025-04-04,PMS,D6,Delhi,RM 10,SB,AAA LIQUID PLAN,Inflow,3000000,0.3
+Code 14,Client 14,2025-04-04,PMS,D4,Delhi,RM 11,GA-SB,AAA India Opportunity Plan Equity,Inflow,5000000,0.5
+Code 15,Client 15,2025-04-04,PMS,D4,Chennai,RM 6,GA-SB,AAA India Opportunity Plan Equity,Inflow,3000000,0.3
+Code 16,Client 16,2025-04-04,PMS,D4,Chennai,RM 6,GA-SB,AAA LIQUID PLAN,Inflow,6000000,0.6
+Code 17,Client 17,2025-04-07,AIF,D7,VADODARA,RM 12,RK-SB,AAA India Equity Fund Scheme-1,Inflow,20000000,2
+Code 22,Client 22,2025-04-08,PMS,D1,Bangalore,RM 15,GA-SB,AAA COUTURE,Inflow,25000000,2.5
+Code 23,Client 23,2025-04-09,AIF,D6,Mumbai,RM 16,SB,AAA India Equity Fund Scheme-1,Inflow,11000000,1.1
+Code 33,Client 33,2025-04-09,PMS,D1,Bangalore,RM 15,GA-SB,AAA COUTURE,Inflow,30000000,3
+Code 34,Client 34,2025-04-09,PMS,D1,Bangalore,RM 15,GA-SB,AAA COUTURE,Inflow,22100000,2.21
+Code 35,Client 35,2025-04-11,AIF,D2,Gurgaon,RM 21,RK-SB,AAA India Equity Fund Scheme-1,Inflow,15000000,1.5
+Code 41,Client 41,2025-04-14,AIF,D13,Pune,RM 24,SB,AAA India Equity Fund Scheme-1,Inflow,10000000,1
+Code 44,Client 44,2025-04-16,AIF,D4,Mumbai,RM 27,GA-SB,AAA India Equity Fund Scheme-1,Inflow,10000000,1
+Code 50,Client 50,2025-05-05,PMS,D7,Mumbai,RM 19,RK-SB,AAA India Opportunity Plan Equity,Inflow,5000000,0.5
+Code 51,Client 51,2025-05-10,PMS,D1,Bangalore,RM 15,GA-SB,AAA Budding Beasts Equity,Inflow,8000000,0.8
+Code 52,Client 52,2025-06-15,AIF,D3,Gurgaon,RM 3,GA-SB,AAA India Equity Fund Scheme-1,Inflow,15000000,1.5
+Code 53,Client 53,2025-07-01,PMS,D7,Delhi,RM 12,RK-SB,AAA India Opportunity Plan Equity,Inflow,7500000,0.75
+Code 54,Client 54,2025-07-20,AIF,D26,Delhi,RM 37,SB,AAA India Equity Fund Scheme-1,Inflow,510000000,51
+Code 55,Client 55,2025-08-05,PMS,D1,Bangalore,RM 15,GA-SB,AAA Budding Beasts Equity,Inflow,5000000,0.5
+Code 56,Client 56,2025-09-10,PMS,D4,Chennai,RM 6,GA-SB,AAA SHARIAH,Inflow,5000000,0.5
+Code 57,Client 57,2025-10-01,PMS,D7,Mumbai,RM 19,RK-SB,AAA LIQUID PLAN,Inflow,3000000,0.3`;
+
+  const sampleOutflow = `Client Code,Client Name,Date,PMS/AIF,Name of Distributor,Location,Distributor- RM Name,AAARM,SCHEMENAME,Transaction,Outflow amount,Amt in Crs
+Client 1111,Client 1111,2025-04-02,PMS,D24,Mumbai,RM 110,SB,AAA Budding Beasts Equity,Outflow,1500000,0.15
+Client 1112,Client 1112,2025-04-04,PMS,D2,Hyderabad,RM 9,RK-SB,AAA India Opportunity Plan Equity,Outflow,6414893.87,0.641489387
+Client 1113,Client 1113,2025-04-16,AIF,D1,Delhi,RM 87,GA-SB,AAA India Equity Fund Scheme-1,Outflow,22637017.22,2.2637
+Client 1114,Client 1114,2025-04-16,AIF,D1,Delhi,RM 87,GA-SB,AAA India Equity Fund Scheme-1,Outflow,27131507.47,2.7132
+Client 1115,Client 1115,2025-04-23,PMS,D1,Chennai,RM 500,GA-SB,AAA India Opportunity Plan Equity,Outflow,8431630.46,0.8432
+Client 1133,Client 1133,2025-05-13,PMS,D1,Bangalore,RM 15,GA-SB,AAA SHARIAH,Outflow,7000000,0.7
+Client 1134,Client 1134,2025-05-13,PMS,D1,Bangalore,RM 15,GA-SB,AAA SHARIAH,Outflow,10000000,1
+Client 1135,Client 1135,2025-05-16,AIF,D4,Delhi,RM 505,GA-SB,AAA India Equity Fund Scheme-1,Outflow,3500000,0.35
+Client 1136,Client 1136,2025-05-21,PMS,D4,Chennai,RM 6,GA-SB,AAA India Opportunity Plan Equity,Outflow,13000000,1.3
+Client 1138,Client 1138,2025-06-06,AIF,D4,Mumbai,RM 507,GA-SB,AAA India Equity Fund Scheme-1,Outflow,13285732.73,1.3286`;
+
+  inflowData = parseCSV(sampleInflow);
+  outflowData = parseCSV(sampleOutflow);
+  computeAll();
+  render();
+}
+
+// ─── SUMMARY TAB ───
+function renderSummary(c) {
+  const d = computed;
+  const y1 = compareFYs.year1, y2 = compareFYs.year2;
+  const single = isSingleFY();
+  const lbl1 = fyLabel(y1), lbl2 = fyLabel(y2);
+
+  const in1 = d.totalInflowByFY[y1] || 0, in2 = d.totalInflowByFY[y2] || 0;
+  const out1 = d.totalOutflowByFY[y1] || 0, out2 = d.totalOutflowByFY[y2] || 0;
+  const net1 = in1 - out1, net2 = in2 - out2;
+
+  const inflowDelta = pctDelta(in2, in1);
+  const outflowDelta = pctDelta(out2, out1);
+  const netDelta = pctDelta(net2, net1);
+
+  let html = renderFilterBar();
+
+  // Sparkline data — monthly inflow trend for y2 (total across categories)
+  const inflowSpark = new Array(12).fill(0).map((_, i) => (d.monthlyByCategory.PMS[y2]?.inflow[i] || 0) + (d.monthlyByCategory.AIF[y2]?.inflow[i] || 0));
+  const outflowSpark = new Array(12).fill(0).map((_, i) => (d.monthlyByCategory.PMS[y2]?.outflow[i] || 0) + (d.monthlyByCategory.AIF[y2]?.outflow[i] || 0));
+  const netSpark = inflowSpark.map((v, i) => v - outflowSpark[i]);
+  const pmsSpark = new Array(12).fill(0).map((_, i) => d.monthlyByCategory.PMS[y2]?.inflow[i] || 0);
+  const aifSpark = new Array(12).fill(0).map((_, i) => d.monthlyByCategory.AIF[y2]?.inflow[i] || 0);
+
+  const subCompare = (v2, v1, dlt) => single
+    ? `<span>${lbl2}</span>`
+    : `<span>${lbl2}</span> · <span class="dim">vs ${fmt(v1)} Cr</span> <span class="delta ${dlt.cls}">${dlt.txt}</span>`;
+
+  html += `
+  <div class="cards">
+    <div class="card accent-lime">
+      <div class="label">Total Inflow</div>
+      <div class="value lime">${fmt(in2)}<span class="unit">Cr</span></div>
+      <div class="sub">${subCompare(in2, in1, inflowDelta)}</div>
+      <div class="spark-wrap">${sparkline(inflowSpark, {color:'#A3E635'})}</div>
+    </div>
+    <div class="card accent-crimson">
+      <div class="label">Total Outflow</div>
+      <div class="value crimson">${fmt(out2)}<span class="unit">Cr</span></div>
+      <div class="sub">${subCompare(out2, out1, outflowDelta)}</div>
+      <div class="spark-wrap">${sparkline(outflowSpark, {color:'#F43F5E'})}</div>
+    </div>
+    <div class="card accent-saffron">
+      <div class="label">Net Flow</div>
+      <div class="value ${net2 >= 0 ? 'lime' : 'crimson'}">${fmt(net2)}<span class="unit">Cr</span></div>
+      <div class="sub">${subCompare(net2, net1, netDelta)}</div>
+      <div class="spark-wrap">${sparkline(netSpark, {color: net2 >= 0 ? '#A3E635' : '#F43F5E'})}</div>
+    </div>
+    <div class="card accent-violet">
+      <div class="label">PMS Inflow</div>
+      <div class="value saffron">${fmt(d.categorySummary.PMS[y2]?.inflow || 0)}<span class="unit">Cr</span></div>
+      <div class="sub"><span class="badge pms">PMS</span>${single ? '' : `<span class="dim">${lbl1}: ${fmt(d.categorySummary.PMS[y1]?.inflow || 0)}</span>`}</div>
+      <div class="spark-wrap">${sparkline(pmsSpark, {color:'#F59E0B'})}</div>
+    </div>
+    <div class="card accent-cyan">
+      <div class="label">AIF Inflow</div>
+      <div class="value violet">${fmt(d.categorySummary.AIF[y2]?.inflow || 0)}<span class="unit">Cr</span></div>
+      <div class="sub"><span class="badge aif">AIF</span>${single ? '' : `<span class="dim">${lbl1}: ${fmt(d.categorySummary.AIF[y1]?.inflow || 0)}</span>`}</div>
+      <div class="spark-wrap">${sparkline(aifSpark, {color:'#A855F7'})}</div>
+    </div>
+  </div>`;
+
+  // Top movers section (only when comparing)
+  if (!single) {
+    const movers = [];
+    Object.entries(d.distData).forEach(([name, byFY]) => {
+      const v1 = byFY[y1]?.totalIn || 0;
+      const v2 = byFY[y2]?.totalIn || 0;
+      if (v1 === 0 && v2 === 0) return;
+      const abs = v2 - v1;
+      const pct = v1 !== 0 ? abs / Math.abs(v1) * 100 : (v2 > 0 ? 999 : 0);
+      movers.push({ name, v1, v2, abs, pct });
+    });
+    const gainers = movers.filter(m => m.abs > 0).sort((a, b) => b.abs - a.abs).slice(0, 3);
+    const losers = movers.filter(m => m.abs < 0).sort((a, b) => a.abs - b.abs).slice(0, 3);
+    const newEntrants = movers.filter(m => m.v1 === 0 && m.v2 > 0).sort((a, b) => b.v2 - a.v2).slice(0, 3);
+
+    const moverCard = (m, kind) => {
+      const dpct = pctDelta(m.v2, m.v1);
+      return `<div class="mover-card">
+        <div class="rank">${m._rank}</div>
+        <div class="info">
+          <div class="name">${m.name}</div>
+          <div class="meta">${fmt(m.v1)} → ${fmt(m.v2)} Cr</div>
+        </div>
+        <div class="delta-big ${kind}">${kind === 'pos' ? '+' : ''}${fmt(m.abs)}<div style="font-size:10px;font-weight:500;color:var(--text-3);text-align:right">${dpct.txt}</div></div>
+      </div>`;
+    };
+    gainers.forEach((m, i) => m._rank = '0' + (i+1));
+    losers.forEach((m, i) => m._rank = '0' + (i+1));
+    newEntrants.forEach((m, i) => m._rank = '0' + (i+1));
+
+    if (gainers.length || losers.length || newEntrants.length) {
+      html += `<div class="movers-grid">
+        ${gainers.length ? `<div class="movers-section">
+          <h4 style="color:var(--lime)">Top Gainers · ${lbl2}</h4>
+          ${gainers.map(m => moverCard(m, 'pos')).join('')}
+        </div>` : '<div></div>'}
+        ${losers.length ? `<div class="movers-section">
+          <h4 style="color:var(--crimson)">Top Decliners · ${lbl2}</h4>
+          ${losers.map(m => moverCard(m, 'neg')).join('')}
+        </div>` : '<div></div>'}
+        ${newEntrants.length ? `<div class="movers-section">
+          <h4 style="color:var(--cyan)">New in ${lbl2}</h4>
+          ${newEntrants.map(m => moverCard(m, 'pos')).join('')}
+        </div>` : '<div></div>'}
+      </div>`;
+    }
+  }
+
+  // --- PRODUCT TABLE ---
+  html += `<div class="section-title accent-saffron"><div class="swatch"></div><h2>Product-wise <em>Flows</em></h2><span class="tag">₹ Crores</span></div>`;
+  html += `<div class="table-wrap"><table><thead>`;
+  if (single) {
+    html += `<tr><th>Product (Scheme)</th><th>Inflow</th><th>Outflow</th><th>Net Flow</th></tr>`;
+  } else {
+    html += `<tr><th rowspan="2">Product (Scheme)</th><th colspan="3" style="text-align:center;border-bottom:1px solid var(--border)">Inflow</th><th colspan="3" style="text-align:center;border-bottom:1px solid var(--border)">Outflow</th><th colspan="3" style="text-align:center;border-bottom:1px solid var(--border)">Net Flow</th></tr>
+    <tr><th>${lbl1}</th><th>${lbl2}</th><th>Δ%</th><th>${lbl1}</th><th>${lbl2}</th><th>Δ%</th><th>${lbl1}</th><th>${lbl2}</th><th>Δ%</th></tr>`;
+  }
+  html += `</thead><tbody>`;
+
+  let T1in=0, T2in=0, T1out=0, T2out=0;
+  SCHEMES.forEach(s => {
+    const i1 = d.productSummary[s][y1]?.inflow || 0;
+    const i2 = d.productSummary[s][y2]?.inflow || 0;
+    const o1 = d.productSummary[s][y1]?.outflow || 0;
+    const o2 = d.productSummary[s][y2]?.outflow || 0;
+    T1in += i1; T2in += i2; T1out += o1; T2out += o2;
+    const n1 = i1 - o1, n2 = i2 - o2;
+    html += `<tr><td style="font-family:'DM Sans'">${s}</td>`;
+    if (single) {
+      html += `<td class="pos">${fmt(i2)}</td><td class="neg">${fmt(o2)}</td><td class="${n2>=0?'pos':'neg'}">${fmt(n2)}</td>`;
+    } else {
+      html += `<td class="pos">${fmt(i1)}</td><td class="pos">${fmt(i2)}</td>${deltaCell(i2,i1)}
+               <td class="neg">${fmt(o1)}</td><td class="neg">${fmt(o2)}</td>${deltaCell(o2,o1)}
+               <td class="${n1>=0?'pos':'neg'}">${fmt(n1)}</td><td class="${n2>=0?'pos':'neg'}">${fmt(n2)}</td>${deltaCell(n2,n1)}`;
+    }
+    html += `</tr>`;
+  });
+  const Tn1 = T1in - T1out, Tn2 = T2in - T2out;
+  html += `<tr class="total-row"><td>TOTAL</td>`;
+  if (single) {
+    html += `<td class="pos">${fmt(T2in)}</td><td class="neg">${fmt(T2out)}</td><td class="${Tn2>=0?'pos':'neg'}">${fmt(Tn2)}</td>`;
+  } else {
+    html += `<td class="pos">${fmt(T1in)}</td><td class="pos">${fmt(T2in)}</td>${deltaCell(T2in,T1in)}
+             <td class="neg">${fmt(T1out)}</td><td class="neg">${fmt(T2out)}</td>${deltaCell(T2out,T1out)}
+             <td class="${Tn1>=0?'pos':'neg'}">${fmt(Tn1)}</td><td class="${Tn2>=0?'pos':'neg'}">${fmt(Tn2)}</td>${deltaCell(Tn2,Tn1)}`;
+  }
+  html += `</tr></tbody></table></div>`;
+
+  // --- CATEGORY TABLE ---
+  html += `<div class="section-title accent-violet"><div class="swatch"></div><h2>Category <em>Breakdown</em></h2><span class="tag">PMS · AIF</span></div>`;
+  html += `<div class="table-wrap"><table><thead>`;
+  if (single) {
+    html += `<tr><th>Category</th><th>Inflow</th><th>Outflow</th><th>Net Flow</th></tr>`;
+  } else {
+    html += `<tr><th rowspan="2">Category</th><th colspan="3" style="text-align:center;border-bottom:1px solid var(--border)">Inflow</th><th colspan="3" style="text-align:center;border-bottom:1px solid var(--border)">Outflow</th><th colspan="3" style="text-align:center;border-bottom:1px solid var(--border)">Net Flow</th></tr>
+    <tr><th>${lbl1}</th><th>${lbl2}</th><th>Δ%</th><th>${lbl1}</th><th>${lbl2}</th><th>Δ%</th><th>${lbl1}</th><th>${lbl2}</th><th>Δ%</th></tr>`;
+  }
+  html += `</thead><tbody>`;
+
+  let C1in=0, C2in=0, C1out=0, C2out=0;
+  ['PMS','AIF'].forEach(cat => {
+    const i1 = d.categorySummary[cat][y1]?.inflow || 0;
+    const i2 = d.categorySummary[cat][y2]?.inflow || 0;
+    const o1 = d.categorySummary[cat][y1]?.outflow || 0;
+    const o2 = d.categorySummary[cat][y2]?.outflow || 0;
+    C1in += i1; C2in += i2; C1out += o1; C2out += o2;
+    const n1 = i1 - o1, n2 = i2 - o2;
+    html += `<tr><td><span class="badge ${cat.toLowerCase()}">${cat}</span></td>`;
+    if (single) {
+      html += `<td class="pos">${fmt(i2)}</td><td class="neg">${fmt(o2)}</td><td class="${n2>=0?'pos':'neg'}">${fmt(n2)}</td>`;
+    } else {
+      html += `<td class="pos">${fmt(i1)}</td><td class="pos">${fmt(i2)}</td>${deltaCell(i2,i1)}
+               <td class="neg">${fmt(o1)}</td><td class="neg">${fmt(o2)}</td>${deltaCell(o2,o1)}
+               <td class="${n1>=0?'pos':'neg'}">${fmt(n1)}</td><td class="${n2>=0?'pos':'neg'}">${fmt(n2)}</td>${deltaCell(n2,n1)}`;
+    }
+    html += `</tr>`;
+  });
+  const Cn1 = C1in - C1out, Cn2 = C2in - C2out;
+  html += `<tr class="total-row"><td>TOTAL</td>`;
+  if (single) {
+    html += `<td class="pos">${fmt(C2in)}</td><td class="neg">${fmt(C2out)}</td><td class="${Cn2>=0?'pos':'neg'}">${fmt(Cn2)}</td>`;
+  } else {
+    html += `<td class="pos">${fmt(C1in)}</td><td class="pos">${fmt(C2in)}</td>${deltaCell(C2in,C1in)}
+             <td class="neg">${fmt(C1out)}</td><td class="neg">${fmt(C2out)}</td>${deltaCell(C2out,C1out)}
+             <td class="${Cn1>=0?'pos':'neg'}">${fmt(Cn1)}</td><td class="${Cn2>=0?'pos':'neg'}">${fmt(Cn2)}</td>${deltaCell(Cn2,Cn1)}`;
+  }
+  html += `</tr></tbody></table></div>`;
+
+  c.innerHTML = html;
+}
+
+// ─── MONTHLY TRENDS ───
+// Builds monthly header row. If single-FY, 12 cols + Total; else 36 + Total triplet.
+function monthHeaderCells() {
+  const y1 = compareFYs.year1, y2 = compareFYs.year2;
+  if (isSingleFY()) {
+    return MONTHS.map((_, i) => `<th${i > 0 && i % 3 === 0 ? ' class="mstart"' : ''}>${monthLabel(y2, i)}</th>`).join('') + `<th class="mstart">Total</th>`;
+  }
+  let h = '';
+  for (let i = 0; i < 12; i++) {
+    h += `<th class="mstart">${monthLabel(y1, i)}</th><th>${monthLabel(y2, i)}</th><th class="dcol">Δ%</th>`;
+  }
+  h += `<th class="mstart" style="color:var(--lime)">${fyLabel(y1)} Total</th><th style="color:var(--lime)">${fyLabel(y2)} Total</th><th class="dcol">Δ%</th>`;
+  return h;
+}
+
+// Builds data cells for a single entity's monthly series with heatmap intensity
+function monthDataCells(arr1, arr2, typeCls) {
+  const dashEl = '<span class="muted-dash">—</span>';
+  const posRgb = '163, 230, 53', negRgb = '244, 63, 94';
+  const single = isSingleFY();
+  const allVals = [...(arr1||[]), ...(arr2||[])].filter(v => v !== 0);
+  const maxAbs = allVals.length ? Math.max(...allVals.map(Math.abs)) : 0;
+
+  const cellClr = (v) => {
+    if (v === 0) return { rgb: '', cls: typeCls };
+    if (typeCls === 'pos') return { rgb: posRgb, cls: typeCls };
+    if (typeCls === 'neg') return { rgb: negRgb, cls: typeCls };
+    return { rgb: v > 0 ? posRgb : negRgb, cls: v > 0 ? 'pos' : 'neg' };
+  };
+
+  const renderCell = (v, i, isStart = false) => {
+    if (v === 0) return `<td class="${typeCls}${isStart ? ' mstart' : ''}">${dashEl}</td>`;
+    const info = cellClr(v);
+    const intensity = maxAbs ? Math.min(Math.abs(v) / maxAbs, 1).toFixed(3) : 0;
+    return `<td class="${info.cls} heat${isStart ? ' mstart' : ''}" style="--heat:${intensity};--heat-rgb:${info.rgb}">${fmt(v)}</td>`;
+  };
+
+  if (single) {
+    let total = 0, h = '';
+    arr2.forEach((v, i) => { total += v; h += renderCell(v, i, i > 0 && i % 3 === 0); });
+    const info = cellClr(total);
+    const intensity = maxAbs ? Math.min(Math.abs(total) / (maxAbs * 12), 1).toFixed(3) : 0;
+    h += `<td class="${info.cls || typeCls} heat" style="font-weight:700;--heat:${intensity};--heat-rgb:${info.rgb}">${fmt(total)}</td>`;
+    return h;
+  }
+
+  let t1 = 0, t2 = 0, h = '';
+  for (let i = 0; i < 12; i++) {
+    const v1 = arr1[i] || 0, v2 = arr2[i] || 0;
+    t1 += v1; t2 += v2;
+    h += renderCell(v1, i, true);
+    h += renderCell(v2, i);
+    h += deltaCell(v2, v1);
+  }
+  const info1 = cellClr(t1), info2 = cellClr(t2);
+  h += `<td class="${info1.cls || typeCls} heat mstart" style="font-weight:700;--heat:0.9;--heat-rgb:${info1.rgb}">${fmt(t1)}</td>`;
+  h += `<td class="${info2.cls || typeCls} heat" style="font-weight:700;--heat:0.9;--heat-rgb:${info2.rgb}">${fmt(t2)}</td>`;
+  h += deltaCell(t2, t1);
+  return h;
+}
+
+function renderMonthly(c) {
+  const d = computed;
+  const y1 = compareFYs.year1, y2 = compareFYs.year2;
+  const single = isSingleFY();
+  const lbl1 = fyLabel(y1), lbl2 = fyLabel(y2);
+
+  let html = renderFilterBar() + `<div class="section-title accent-violet"><div class="swatch"></div><h2>Monthly Inflow by <em>Category</em></h2><span class="tag">${single ? lbl2 : lbl1 + ' vs ' + lbl2}</span></div>`;
+  html += `<div class="table-wrap"><table id="tbl_monthCat"><thead><tr><th>Category</th>${monthHeaderCells()}</tr></thead><tbody>`;
+
+  ['PMS','AIF'].forEach(cat => {
+    const a1 = d.monthlyByCategory[cat][y1]?.inflow || new Array(12).fill(0);
+    const a2 = d.monthlyByCategory[cat][y2]?.inflow || new Array(12).fill(0);
+    html += `<tr><td><span class="badge ${cat.toLowerCase()}">${cat}</span></td>${monthDataCells(a1, a2, 'pos')}</tr>`;
+  });
+  // Total row
+  const totA1 = new Array(12).fill(0).map((_, i) => (d.monthlyByCategory.PMS[y1]?.inflow[i] || 0) + (d.monthlyByCategory.AIF[y1]?.inflow[i] || 0));
+  const totA2 = new Array(12).fill(0).map((_, i) => (d.monthlyByCategory.PMS[y2]?.inflow[i] || 0) + (d.monthlyByCategory.AIF[y2]?.inflow[i] || 0));
+  html += `<tr class="total-row"><td>TOTAL</td>${monthDataCells(totA1, totA2, 'pos')}</tr>`;
+  html += `</tbody></table></div>`;
+
+  // Visual bar chart — paired bars per month
+  html += `<div class="chart-card">
+    <div class="chart-head">
+      <h3>Monthly Inflow <em>Visualization</em></h3>
+      <div class="legend">`;
+  if (single) {
+    html += `<div class="legend-item"><div class="legend-dot" style="background:var(--saffron)"></div>PMS</div>
+             <div class="legend-item"><div class="legend-dot" style="background:var(--violet)"></div>AIF</div>`;
+  } else {
+    html += `<div class="legend-item"><div class="legend-dot" style="background:var(--saffron)"></div>${lbl1}</div>
+             <div class="legend-item"><div class="legend-dot" style="background:var(--violet)"></div>${lbl2}</div>`;
+  }
+  html += `</div></div><div class="bar-chart">`;
+
+  if (single) {
+    const maxVal = Math.max(...MONTHS.map((_, i) => (d.monthlyByCategory.PMS[y2]?.inflow[i]||0) + (d.monthlyByCategory.AIF[y2]?.inflow[i]||0)), 1);
+    MONTHS.forEach((m, i) => {
+      const pms = d.monthlyByCategory.PMS[y2]?.inflow[i] || 0;
+      const aif = d.monthlyByCategory.AIF[y2]?.inflow[i] || 0;
+      const h1 = (pms / maxVal) * 100, h2 = (aif / maxVal) * 100;
+      html += `<div class="bar-col">
+        <div class="bars">
+          <div class="bar b-saffron" style="height:${h1}%" title="PMS ${monthLabel(y2,i)}: ${fmt(pms)}"></div>
+          <div class="bar b-violet" style="height:${h2}%" title="AIF ${monthLabel(y2,i)}: ${fmt(aif)}"></div>
+        </div>
+        <div class="mlabel">${monthLabel(y2, i)}</div>
+      </div>`;
+    });
+  } else {
+    const maxVal = Math.max(
+      ...MONTHS.map((_, i) => totA1[i]),
+      ...MONTHS.map((_, i) => totA2[i]),
+      1
+    );
+    MONTHS.forEach((m, i) => {
+      const v1 = totA1[i], v2 = totA2[i];
+      const h1 = (v1 / maxVal) * 100, h2 = (v2 / maxVal) * 100;
+      html += `<div class="bar-col">
+        <div class="bars">
+          <div class="bar b-saffron" style="height:${h1}%" title="${monthLabel(y1,i)}: ${fmt(v1)}"></div>
+          <div class="bar b-violet" style="height:${h2}%" title="${monthLabel(y2,i)}: ${fmt(v2)}"></div>
+        </div>
+        <div class="mlabel">${MONTHS[i]}</div>
+      </div>`;
+    });
+  }
+  html += `</div></div>`;
+
+  // Monthly Inflow by Product
+  html += `<div class="section-title accent-lime"><div class="swatch"></div><h2>Monthly Inflow by <em>Product</em></h2><span class="tag">${single ? lbl2 : lbl1 + ' vs ' + lbl2}</span></div>`;
+  html += `<div class="table-wrap"><table id="tbl_monthInProd"><thead><tr><th>Product</th>${monthHeaderCells()}</tr></thead><tbody>`;
+  SCHEMES.forEach(s => {
+    const a1 = d.monthlyByProduct[s][y1]?.inflow || new Array(12).fill(0);
+    const a2 = d.monthlyByProduct[s][y2]?.inflow || new Array(12).fill(0);
+    html += `<tr><td>${SCHEME_SHORT[s]}</td>${monthDataCells(a1, a2, 'pos')}</tr>`;
+  });
+  html += `</tbody></table></div>`;
+
+  // Monthly Outflow by Product
+  html += `<div class="section-title accent-crimson"><div class="swatch"></div><h2>Monthly Outflow by <em>Product</em></h2><span class="tag">${single ? lbl2 : lbl1 + ' vs ' + lbl2}</span></div>`;
+  html += `<div class="table-wrap"><table id="tbl_monthOutProd"><thead><tr><th>Product</th>${monthHeaderCells()}</tr></thead><tbody>`;
+  SCHEMES.forEach(s => {
+    const a1 = d.monthlyByProduct[s][y1]?.outflow || new Array(12).fill(0);
+    const a2 = d.monthlyByProduct[s][y2]?.outflow || new Array(12).fill(0);
+    html += `<tr><td>${SCHEME_SHORT[s]}</td>${monthDataCells(a1, a2, 'neg')}</tr>`;
+  });
+  html += `</tbody></table></div>`;
+
+  c.innerHTML = html;
+}
+
+// ─── TOP DISTRIBUTORS ───
+function renderDistributors(c) {
+  const d = computed;
+  const y1 = compareFYs.year1, y2 = compareFYs.year2;
+  const single = isSingleFY();
+  const lbl1 = fyLabel(y1), lbl2 = fyLabel(y2);
+
+  // Sort by y2 totalIn descending
+  const sorted = Object.entries(d.distData).sort((a, b) => (b[1][y2]?.totalIn || 0) - (a[1][y2]?.totalIn || 0));
+
+  let html = renderFilterBar() + `<div class="section-title accent-lime"><div class="swatch"></div><h2>All <em>Distributors</em></h2><span class="tag">${single ? lbl2 : lbl1 + ' vs ' + lbl2}</span></div>`;
+  html += tableTools('tbl_dists', 'distributors.csv', 'Search distributor…');
+  html += `<div class="table-wrap"><table id="tbl_dists"><thead>`;
+  if (single) {
+    html += `<tr><th>#</th><th>Distributor</th><th>PMS Inflow</th><th>AIF Inflow</th><th>Total Inflow</th><th>Total Outflow</th><th>Net Flow</th><th># Tx</th></tr>`;
+  } else {
+    html += `<tr><th rowspan="2">#</th><th rowspan="2">Distributor</th>
+      <th colspan="3" style="text-align:center;border-bottom:1px solid var(--border)">PMS Inflow</th>
+      <th colspan="3" style="text-align:center;border-bottom:1px solid var(--border)">AIF Inflow</th>
+      <th colspan="3" style="text-align:center;border-bottom:1px solid var(--border)">Total Inflow</th>
+      <th colspan="3" style="text-align:center;border-bottom:1px solid var(--border)">Outflow</th>
+      <th colspan="3" style="text-align:center;border-bottom:1px solid var(--border)">Net Flow</th>
+      <th rowspan="2"># Tx</th></tr>
+      <tr><th>${lbl1}</th><th>${lbl2}</th><th>Δ%</th>
+          <th>${lbl1}</th><th>${lbl2}</th><th>Δ%</th>
+          <th>${lbl1}</th><th>${lbl2}</th><th>Δ%</th>
+          <th>${lbl1}</th><th>${lbl2}</th><th>Δ%</th>
+          <th>${lbl1}</th><th>${lbl2}</th><th>Δ%</th></tr>`;
+  }
+  html += `</thead><tbody>`;
+
+  sorted.forEach(([name, data], i) => {
+    const b1 = data[y1] || {pmsIn:0,aifIn:0,totalIn:0,totalOut:0,txCount:0};
+    const b2 = data[y2] || {pmsIn:0,aifIn:0,totalIn:0,totalOut:0,txCount:0};
+    const nf1 = b1.totalIn - b1.totalOut, nf2 = b2.totalIn - b2.totalOut;
+    const txTotal = b1.txCount + (single ? 0 : b2.txCount);
+    html += `<tr><td>${i+1}</td><td style="font-family:'DM Sans';font-weight:600">${name}</td>`;
+    if (single) {
+      html += `<td class="pos">${fmt(b2.pmsIn)}</td>
+               <td style="color:var(--accent2)">${fmt(b2.aifIn)}</td>
+               <td class="pos" style="font-weight:700">${fmt(b2.totalIn)}</td>
+               <td class="neg">${fmt(b2.totalOut)}</td>
+               <td class="${nf2>=0?'pos':'neg'}" style="font-weight:700">${fmt(nf2)}</td>
+               <td>${b2.txCount}</td>`;
+    } else {
+      html += `<td class="pos">${fmt(b1.pmsIn)}</td><td class="pos">${fmt(b2.pmsIn)}</td>${deltaCell(b2.pmsIn, b1.pmsIn)}
+               <td style="color:var(--accent2)">${fmt(b1.aifIn)}</td><td style="color:var(--accent2)">${fmt(b2.aifIn)}</td>${deltaCell(b2.aifIn, b1.aifIn)}
+               <td class="pos">${fmt(b1.totalIn)}</td><td class="pos" style="font-weight:700">${fmt(b2.totalIn)}</td>${deltaCell(b2.totalIn, b1.totalIn)}
+               <td class="neg">${fmt(b1.totalOut)}</td><td class="neg">${fmt(b2.totalOut)}</td>${deltaCell(b2.totalOut, b1.totalOut)}
+               <td class="${nf1>=0?'pos':'neg'}">${fmt(nf1)}</td><td class="${nf2>=0?'pos':'neg'}" style="font-weight:700">${fmt(nf2)}</td>${deltaCell(nf2, nf1)}
+               <td>${txTotal}</td>`;
+    }
+    html += `</tr>`;
+  });
+  html += `</tbody></table></div>`;
+
+  // Top 3 PMS and AIF — based on y2
+  const topPMS = sorted.filter(([_, v]) => (v[y2]?.pmsIn || 0) > 0).sort((a, b) => (b[1][y2]?.pmsIn || 0) - (a[1][y2]?.pmsIn || 0)).slice(0, 3);
+  const topAIF = sorted.filter(([_, v]) => (v[y2]?.aifIn || 0) > 0).sort((a, b) => (b[1][y2]?.aifIn || 0) - (a[1][y2]?.aifIn || 0)).slice(0, 3);
+
+  html += `<div class="grid-2" style="margin-top:24px">
+    <div>
+      <div class="section-title accent-saffron"><div class="swatch"></div><h2>Top 3 <em>PMS</em></h2><span class="tag">${lbl2}</span></div>
+      <div class="table-wrap"><table><thead><tr><th>Rank</th><th>Distributor</th>${single ? '<th>PMS Inflow (₹ Crs)</th>' : `<th>${lbl1}</th><th>${lbl2}</th><th class="dcol">Δ%</th>`}</tr></thead><tbody>`;
+  topPMS.forEach(([name, data], i) => {
+    const v1 = data[y1]?.pmsIn || 0, v2 = data[y2]?.pmsIn || 0;
+    html += `<tr><td style="font-family:'Instrument Serif',serif;font-size:18px;color:var(--saffron)">0${i+1}</td><td>${name}</td>`;
+    if (single) html += `<td class="pos">${fmt(v2)}</td>`;
+    else html += `<td class="pos">${fmt(v1)}</td><td class="pos">${fmt(v2)}</td>${deltaCell(v2,v1)}`;
+    html += `</tr>`;
+  });
+  html += `</tbody></table></div></div>
+    <div>
+      <div class="section-title accent-violet"><div class="swatch"></div><h2>Top 3 <em>AIF</em></h2><span class="tag">${lbl2}</span></div>
+      <div class="table-wrap"><table><thead><tr><th>Rank</th><th>Distributor</th>${single ? '<th>AIF Inflow (₹ Crs)</th>' : `<th>${lbl1}</th><th>${lbl2}</th><th class="dcol">Δ%</th>`}</tr></thead><tbody>`;
+  topAIF.forEach(([name, data], i) => {
+    const v1 = data[y1]?.aifIn || 0, v2 = data[y2]?.aifIn || 0;
+    html += `<tr><td style="font-family:'Instrument Serif',serif;font-size:18px;color:var(--violet)">0${i+1}</td><td>${name}</td>`;
+    if (single) html += `<td style="color:var(--violet)">${fmt(v2)}</td>`;
+    else html += `<td style="color:var(--violet)">${fmt(v1)}</td><td style="color:var(--violet)">${fmt(v2)}</td>${deltaCell(v2,v1)}`;
+    html += `</tr>`;
+  });
+  html += `</tbody></table></div></div></div>`;
+
+  c.innerHTML = html;
+}
+
+// ─── CITY ANALYSIS ───
+function renderCity(c) {
+  const d = computed;
+  const y1 = compareFYs.year1, y2 = compareFYs.year2;
+  const single = isSingleFY();
+  const lbl1 = fyLabel(y1), lbl2 = fyLabel(y2);
+
+  const getIn = (data, fy) => data[fy]?.inflow || 0;
+  const getOut = (data, fy) => data[fy]?.outflow || 0;
+  const getMonIn = (data, fy) => data[fy]?.monthlyIn || new Array(12).fill(0);
+  const getMonOut = (data, fy) => data[fy]?.monthlyOut || new Array(12).fill(0);
+
+  const sorted = Object.entries(d.cityData).sort((a, b) => getIn(b[1], y2) - getIn(a[1], y2));
+  const totalInflow2 = sorted.reduce((s, [_, v]) => s + getIn(v, y2), 0);
+  const totalInflow1 = sorted.reduce((s, [_, v]) => s + getIn(v, y1), 0);
+
+  // --- Summary table ---
+  let html = renderFilterBar() + `<div class="section-title accent-pink"><div class="swatch"></div><h2>City <em>Analysis</em></h2><span class="tag">${single ? lbl2 : lbl1 + ' vs ' + lbl2}</span></div>`;
+  html += tableTools('tbl_citySum', 'city_summary.csv', 'Search city…');
+  html += `<div class="table-wrap"><table id="tbl_citySum"><thead>`;
+  if (single) {
+    html += `<tr><th>City</th><th>Inflow</th><th>Outflow</th><th>Net Flow</th><th>% of Total Inflow</th></tr>`;
+  } else {
+    html += `<tr><th rowspan="2">City</th>
+      <th colspan="3" style="text-align:center;border-bottom:1px solid var(--border)">Inflow</th>
+      <th colspan="3" style="text-align:center;border-bottom:1px solid var(--border)">Outflow</th>
+      <th colspan="3" style="text-align:center;border-bottom:1px solid var(--border)">Net Flow</th>
+      <th colspan="2" style="text-align:center;border-bottom:1px solid var(--border)">% of Inflow</th></tr>
+      <tr><th>${lbl1}</th><th>${lbl2}</th><th>Δ%</th>
+          <th>${lbl1}</th><th>${lbl2}</th><th>Δ%</th>
+          <th>${lbl1}</th><th>${lbl2}</th><th>Δ%</th>
+          <th>${lbl1}</th><th>${lbl2}</th></tr>`;
+  }
+  html += `</thead><tbody>`;
+
+  sorted.forEach(([city, data]) => {
+    const i1 = getIn(data, y1), i2 = getIn(data, y2);
+    const o1 = getOut(data, y1), o2 = getOut(data, y2);
+    const n1 = i1 - o1, n2 = i2 - o2;
+    const p1 = totalInflow1 > 0 ? (i1 / totalInflow1 * 100) : 0;
+    const p2 = totalInflow2 > 0 ? (i2 / totalInflow2 * 100) : 0;
+    html += `<tr><td style="font-family:'DM Sans';font-weight:500">${city}</td>`;
+    if (single) {
+      html += `<td class="pos">${fmt(i2)}</td><td class="neg">${fmt(o2)}</td><td class="${n2>=0?'pos':'neg'}">${fmt(n2)}</td><td>${p2.toFixed(1)}%</td>`;
+    } else {
+      html += `<td class="pos">${fmt(i1)}</td><td class="pos">${fmt(i2)}</td>${deltaCell(i2,i1)}
+               <td class="neg">${fmt(o1)}</td><td class="neg">${fmt(o2)}</td>${deltaCell(o2,o1)}
+               <td class="${n1>=0?'pos':'neg'}">${fmt(n1)}</td><td class="${n2>=0?'pos':'neg'}">${fmt(n2)}</td>${deltaCell(n2,n1)}
+               <td>${p1.toFixed(1)}%</td><td>${p2.toFixed(1)}%</td>`;
+    }
+    html += `</tr>`;
+  });
+
+  const totI1 = totalInflow1, totI2 = totalInflow2;
+  const totO1 = sorted.reduce((s, [_, v]) => s + getOut(v, y1), 0);
+  const totO2 = sorted.reduce((s, [_, v]) => s + getOut(v, y2), 0);
+  const totN1 = totI1 - totO1, totN2 = totI2 - totO2;
+  html += `<tr class="total-row"><td>TOTAL</td>`;
+  if (single) {
+    html += `<td class="pos">${fmt(totI2)}</td><td class="neg">${fmt(totO2)}</td><td class="${totN2>=0?'pos':'neg'}">${fmt(totN2)}</td><td>100%</td>`;
+  } else {
+    html += `<td class="pos">${fmt(totI1)}</td><td class="pos">${fmt(totI2)}</td>${deltaCell(totI2,totI1)}
+             <td class="neg">${fmt(totO1)}</td><td class="neg">${fmt(totO2)}</td>${deltaCell(totO2,totO1)}
+             <td class="${totN1>=0?'pos':'neg'}">${fmt(totN1)}</td><td class="${totN2>=0?'pos':'neg'}">${fmt(totN2)}</td>${deltaCell(totN2,totN1)}
+             <td>100%</td><td>100%</td>`;
+  }
+  html += `</tr></tbody></table></div>`;
+
+  // --- Monthly Inflow by City ---
+  html += `<div class="section-title accent-lime"><div class="swatch"></div><h2>City-wise <em>Monthly Inflow</em></h2><span class="tag">${single ? lbl2 : lbl1 + ' vs ' + lbl2}</span></div>`;
+  html += tableTools('tbl_cityIn', 'city_monthly_inflow.csv', 'Search city…');
+  html += `<div class="table-wrap"><table id="tbl_cityIn"><thead><tr><th>City</th>${monthHeaderCells()}</tr></thead><tbody>`;
+  sorted.forEach(([city, data]) => {
+    html += `<tr><td>${city}</td>${monthDataCells(getMonIn(data, y1), getMonIn(data, y2), 'pos')}</tr>`;
+  });
+  const totMonIn1 = new Array(12).fill(0).map((_, i) => sorted.reduce((s, [_, v]) => s + getMonIn(v, y1)[i], 0));
+  const totMonIn2 = new Array(12).fill(0).map((_, i) => sorted.reduce((s, [_, v]) => s + getMonIn(v, y2)[i], 0));
+  html += `<tr class="total-row"><td>TOTAL</td>${monthDataCells(totMonIn1, totMonIn2, 'pos')}</tr>`;
+  html += `</tbody></table></div>`;
+
+  // --- Monthly Outflow by City ---
+  html += `<div class="section-title accent-crimson"><div class="swatch"></div><h2>City-wise <em>Monthly Outflow</em></h2><span class="tag">${single ? lbl2 : lbl1 + ' vs ' + lbl2}</span></div>`;
+  html += tableTools('tbl_cityOut', 'city_monthly_outflow.csv', 'Search city…');
+  html += `<div class="table-wrap"><table id="tbl_cityOut"><thead><tr><th>City</th>${monthHeaderCells()}</tr></thead><tbody>`;
+  sorted.forEach(([city, data]) => {
+    const out1 = getMonOut(data, y1), out2 = getMonOut(data, y2);
+    const total = out1.reduce((a,b) => a+b, 0) + out2.reduce((a,b) => a+b, 0);
+    if (total === 0) return;
+    html += `<tr><td>${city}</td>${monthDataCells(out1, out2, 'neg')}</tr>`;
+  });
+  const totMonOut1 = new Array(12).fill(0).map((_, i) => sorted.reduce((s, [_, v]) => s + getMonOut(v, y1)[i], 0));
+  const totMonOut2 = new Array(12).fill(0).map((_, i) => sorted.reduce((s, [_, v]) => s + getMonOut(v, y2)[i], 0));
+  html += `<tr class="total-row"><td>TOTAL</td>${monthDataCells(totMonOut1, totMonOut2, 'neg')}</tr>`;
+  html += `</tbody></table></div>`;
+
+  // --- Monthly Net Flow by City ---
+  html += `<div class="section-title accent-violet"><div class="swatch"></div><h2>City-wise <em>Net Flow</em></h2><span class="tag">${single ? lbl2 : lbl1 + ' vs ' + lbl2}</span></div>`;
+  html += tableTools('tbl_cityNet', 'city_monthly_net.csv', 'Search city…');
+  html += `<div class="table-wrap"><table id="tbl_cityNet"><thead><tr><th>City</th>${monthHeaderCells()}</tr></thead><tbody>`;
+  sorted.forEach(([city, data]) => {
+    const in1 = getMonIn(data, y1), in2 = getMonIn(data, y2);
+    const out1 = getMonOut(data, y1), out2 = getMonOut(data, y2);
+    const net1 = in1.map((v, i) => v - out1[i]);
+    const net2 = in2.map((v, i) => v - out2[i]);
+    html += `<tr><td>${city}</td>${monthDataCells(net1, net2, '')}</tr>`;
+  });
+  const totNet1 = new Array(12).fill(0).map((_, i) => totMonIn1[i] - totMonOut1[i]);
+  const totNet2 = new Array(12).fill(0).map((_, i) => totMonIn2[i] - totMonOut2[i]);
+  html += `<tr class="total-row"><td>TOTAL</td>${monthDataCells(totNet1, totNet2, '')}</tr>`;
+  html += `</tbody></table></div>`;
+
+  c.innerHTML = html;
+}
+
+// ─── SCHEME x DISTRIBUTOR ───
+function renderDistScheme(c) {
+  let html = renderFilterBar() + `<div class="filter-row">
+    <label style="font-size:13px;color:var(--text2)">Product / Scheme:</label>
+    <select id="schemeDistFilter" onchange="updateDistSchemeTable()">`;
+  SCHEMES.forEach(s => { html += `<option value="${s}">${SCHEME_SHORT[s]}</option>`; });
+  html += `</select>
+    <label style="font-size:13px;color:var(--text2);margin-left:16px">Type:</label>
+    <select id="distTypeFilter" onchange="updateDistSchemeTable()">
+      <option value="inflow">Inflow</option>
+      <option value="outflow">Outflow</option>
+      <option value="net">Net Flow</option>
+    </select>
+  </div>`;
+  
+  html += `<div id="distSchemeTable"></div>`;
+  c.innerHTML = html;
+  updateDistSchemeTable();
+}
+
+function buildSchemeEntityRows(entityMap, scheme, type, y1, y2) {
+  // Returns [{name, arr1, arr2, tot1, tot2}] for rows with any data in either FY
+  const rows = [];
+  for (const [name, schemes] of Object.entries(entityMap)) {
+    if (!schemes[scheme]) continue;
+    const fy1Buckets = schemes[scheme][y1] || { inflow: new Array(12).fill(0), outflow: new Array(12).fill(0) };
+    const fy2Buckets = schemes[scheme][y2] || { inflow: new Array(12).fill(0), outflow: new Array(12).fill(0) };
+    let arr1, arr2;
+    if (type === 'inflow') { arr1 = fy1Buckets.inflow; arr2 = fy2Buckets.inflow; }
+    else if (type === 'outflow') { arr1 = fy1Buckets.outflow; arr2 = fy2Buckets.outflow; }
+    else { arr1 = fy1Buckets.inflow.map((v, i) => v - fy1Buckets.outflow[i]); arr2 = fy2Buckets.inflow.map((v, i) => v - fy2Buckets.outflow[i]); }
+    const tot1 = arr1.reduce((a,b) => a+b, 0);
+    const tot2 = arr2.reduce((a,b) => a+b, 0);
+    if (tot1 === 0 && tot2 === 0) continue;
+    rows.push({ name, arr1, arr2, tot1, tot2 });
+  }
+  rows.sort((a, b) => Math.abs(b.tot2) - Math.abs(a.tot2));
+  return rows;
+}
+
+function updateDistSchemeTable() {
+  const scheme = document.getElementById('schemeDistFilter').value;
+  const type = document.getElementById('distTypeFilter').value;
+  const container = document.getElementById('distSchemeTable');
+  const y1 = compareFYs.year1, y2 = compareFYs.year2;
+  const single = isSingleFY();
+  const lbl1 = fyLabel(y1), lbl2 = fyLabel(y2);
+
+  const viewLabel = type === 'inflow' ? 'Inflow' : type === 'outflow' ? 'Outflow' : 'Net Flow';
+  const cls = type === 'inflow' ? 'pos' : type === 'outflow' ? 'neg' : '';
+
+  const distRows = buildSchemeEntityRows(computed.distSchemeMonthly, scheme, type, y1, y2);
+
+  const accent = type === 'inflow' ? 'accent-lime' : type === 'outflow' ? 'accent-crimson' : 'accent-violet';
+  let html = `<div class="section-title ${accent}"><div class="swatch"></div><h2>${SCHEME_SHORT[scheme]} <em>by Distributor</em></h2><span class="tag">${viewLabel}${single ? '' : ' · ' + lbl1 + ' vs ' + lbl2}</span></div>`;
+  html += tableTools('tbl_distScheme', 'dist_scheme_' + scheme.replace(/\W+/g,'_') + '.csv', 'Search distributor…');
+  html += `<div class="table-wrap"><table id="tbl_distScheme"><thead><tr><th>Distributor</th>${monthHeaderCells()}</tr></thead><tbody>`;
+
+  distRows.forEach(row => {
+    html += `<tr><td>${row.name}</td>${monthDataCells(row.arr1, row.arr2, cls)}</tr>`;
+  });
+
+  // Totals row
+  const totArr1 = new Array(12).fill(0).map((_, i) => distRows.reduce((s, r) => s + r.arr1[i], 0));
+  const totArr2 = new Array(12).fill(0).map((_, i) => distRows.reduce((s, r) => s + r.arr2[i], 0));
+  html += `<tr class="total-row"><td>TOTAL · ${distRows.length} distributors</td>${monthDataCells(totArr1, totArr2, cls)}</tr>`;
+  html += `</tbody></table></div>`;
+
+  if (distRows.length === 0) {
+    html = `<div style="text-align:center;padding:40px;color:var(--text2)">No distributor data found for ${SCHEME_SHORT[scheme]}</div>`;
+  }
+  container.innerHTML = html;
+}
+
+// ─── SCHEME x RM ───
+function renderRMScheme(c) {
+  let html = renderFilterBar() + `<div class="filter-row">
+    <label style="font-size:13px;color:var(--text2)">Product / Scheme:</label>
+    <select id="schemeRMFilter" onchange="updateRMSchemeTable()">`;
+  SCHEMES.forEach(s => { html += `<option value="${s}">${SCHEME_SHORT[s]}</option>`; });
+  html += `</select>
+    <label style="font-size:13px;color:var(--text2);margin-left:16px">Type:</label>
+    <select id="rmTypeFilter" onchange="updateRMSchemeTable()">
+      <option value="inflow">Inflow</option>
+      <option value="outflow">Outflow</option>
+      <option value="net">Net Flow</option>
+    </select>
+  </div>`;
+  
+  html += `<div id="rmSchemeTable"></div>`;
+  c.innerHTML = html;
+  updateRMSchemeTable();
+}
+
+function updateRMSchemeTable() {
+  const scheme = document.getElementById('schemeRMFilter').value;
+  const type = document.getElementById('rmTypeFilter').value;
+  const container = document.getElementById('rmSchemeTable');
+  const y1 = compareFYs.year1, y2 = compareFYs.year2;
+  const single = isSingleFY();
+  const lbl1 = fyLabel(y1), lbl2 = fyLabel(y2);
+
+  const viewLabel = type === 'inflow' ? 'Inflow' : type === 'outflow' ? 'Outflow' : 'Net Flow';
+  const cls = type === 'inflow' ? 'pos' : type === 'outflow' ? 'neg' : '';
+
+  const rmRows = buildSchemeEntityRows(computed.rmSchemeMonthly, scheme, type, y1, y2);
+
+  const accent = type === 'inflow' ? 'accent-lime' : type === 'outflow' ? 'accent-crimson' : 'accent-violet';
+  let html = `<div class="section-title ${accent}"><div class="swatch"></div><h2>${SCHEME_SHORT[scheme]} <em>by RM</em></h2><span class="tag">${viewLabel}${single ? '' : ' · ' + lbl1 + ' vs ' + lbl2}</span></div>`;
+  html += tableTools('tbl_rmScheme', 'rm_scheme_' + scheme.replace(/\W+/g,'_') + '.csv', 'Search RM…');
+  html += `<div class="table-wrap"><table id="tbl_rmScheme"><thead><tr><th>RM Name</th>${monthHeaderCells()}</tr></thead><tbody>`;
+
+  rmRows.forEach(row => {
+    html += `<tr><td>${row.name}</td>${monthDataCells(row.arr1, row.arr2, cls)}</tr>`;
+  });
+
+  const totArr1 = new Array(12).fill(0).map((_, i) => rmRows.reduce((s, r) => s + r.arr1[i], 0));
+  const totArr2 = new Array(12).fill(0).map((_, i) => rmRows.reduce((s, r) => s + r.arr2[i], 0));
+  html += `<tr class="total-row"><td>TOTAL · ${rmRows.length} RMs</td>${monthDataCells(totArr1, totArr2, cls)}</tr>`;
+  html += `</tbody></table></div>`;
+
+  if (rmRows.length === 0) {
+    html = `<div style="text-align:center;padding:40px;color:var(--text2)">No RM data found for ${SCHEME_SHORT[scheme]}</div>`;
+  }
+  container.innerHTML = html;
+}
+
+// ─── DIST PERFORMANCE ───
+function renderDistPerf(c) {
+  let html = renderFilterBar() + `<div class="filter-row">
+    <label style="font-size:13px;color:var(--text2)">View:</label>
+    <select id="distPerfView" onchange="updateDistPerfTable()">
+      <option value="inflow">Monthly Inflow</option>
+      <option value="outflow">Monthly Outflow</option>
+      <option value="net">Monthly Net Flow</option>
+    </select>
+  </div>`;
+  html += `<div id="distPerfTableWrap"></div>`;
+  c.innerHTML = html;
+  updateDistPerfTable();
+}
+
+function buildPerfRows(perfMap, view, y1, y2, sortByNaturalKey = false) {
+  const rows = [];
+  for (const [name, byFY] of Object.entries(perfMap)) {
+    const b1 = byFY[y1] || { totalIn: 0, totalOut: 0, monthlyIn: new Array(12).fill(0), monthlyOut: new Array(12).fill(0), txCount: 0 };
+    const b2 = byFY[y2] || { totalIn: 0, totalOut: 0, monthlyIn: new Array(12).fill(0), monthlyOut: new Array(12).fill(0), txCount: 0 };
+    let arr1, arr2;
+    if (view === 'inflow') { arr1 = b1.monthlyIn; arr2 = b2.monthlyIn; }
+    else if (view === 'outflow') { arr1 = b1.monthlyOut; arr2 = b2.monthlyOut; }
+    else { arr1 = b1.monthlyIn.map((v, i) => v - b1.monthlyOut[i]); arr2 = b2.monthlyIn.map((v, i) => v - b2.monthlyOut[i]); }
+    rows.push({ name, b1, b2, arr1, arr2 });
+  }
+  rows.sort((a, b) => {
+    if (b.b2.totalIn !== a.b2.totalIn) return b.b2.totalIn - a.b2.totalIn;
+    return sortByNaturalKey ? naturalSort(a.name, b.name) : 0;
+  });
+  return rows;
+}
+
+function renderPerfTable(container, entityLabel, rows, view, y1, y2, showTxCount) {
+  const single = isSingleFY();
+  const lbl1 = fyLabel(y1), lbl2 = fyLabel(y2);
+  const cls = view === 'inflow' ? 'pos' : view === 'outflow' ? 'neg' : '';
+  const viewLabel = view === 'inflow' ? 'Inflow' : view === 'outflow' ? 'Outflow' : 'Net Flow';
+  const accent = view === 'inflow' ? 'accent-lime' : view === 'outflow' ? 'accent-crimson' : 'accent-violet';
+  const tid = 'tbl_perf_' + entityLabel.replace(/\W+/g, '');
+
+  let html = `<div class="section-title ${accent}"><div class="swatch"></div><h2>${entityLabel} <em>Performance</em></h2><span class="tag">Monthly ${viewLabel}${single ? '' : ' · ' + lbl1 + ' vs ' + lbl2}</span></div>`;
+  html += tableTools(tid, entityLabel.toLowerCase() + '_perf.csv', 'Search ' + entityLabel.toLowerCase() + '…');
+  html += `<div class="table-wrap"><table id="${tid}"><thead>`;
+
+  if (single) {
+    html += `<tr><th>${entityLabel}</th><th>Total Inflow</th><th>Total Outflow</th><th>Net Flow</th><th>Net %</th>${showTxCount ? '<th># Tx</th>' : ''}${monthHeaderCells()}</tr>`;
+  } else {
+    html += `<tr><th rowspan="2">${entityLabel}</th>
+      <th colspan="3" style="text-align:center;border-bottom:1px solid var(--border)">Total Inflow</th>
+      <th colspan="3" style="text-align:center;border-bottom:1px solid var(--border)">Total Outflow</th>
+      <th colspan="3" style="text-align:center;border-bottom:1px solid var(--border)">Net Flow</th>
+      <th colspan="2" style="text-align:center;border-bottom:1px solid var(--border)">Net %</th>
+      ${showTxCount ? '<th rowspan="2"># Tx</th>' : ''}
+      ${MONTHS.map((_, i) => `<th colspan="3" style="text-align:center;border-bottom:1px solid var(--border);background:var(--surface2)">${MONTHS[i]}</th>`).join('')}
+      <th colspan="3" style="text-align:center;border-bottom:1px solid var(--border);background:var(--bg)">Total</th></tr>
+      <tr><th>${lbl1}</th><th>${lbl2}</th><th>Δ%</th>
+          <th>${lbl1}</th><th>${lbl2}</th><th>Δ%</th>
+          <th>${lbl1}</th><th>${lbl2}</th><th>Δ%</th>
+          <th>${lbl1}</th><th>${lbl2}</th>
+          ${MONTHS.map((_, i) => `<th style="background:var(--surface2);font-size:10px">${String(y1).slice(-2)}</th><th style="background:var(--surface2);font-size:10px">${String(y2).slice(-2)}</th><th style="background:var(--surface2);color:var(--text2);font-size:10px">Δ%</th>`).join('')}
+          <th style="background:var(--bg)">${lbl1}</th><th style="background:var(--bg)">${lbl2}</th><th style="background:var(--bg);color:var(--text2);font-size:10px">Δ%</th></tr>`;
+  }
+  html += `</thead><tbody>`;
+
+  rows.forEach(row => {
+    const { name, b1, b2, arr1, arr2 } = row;
+    const nf1 = b1.totalIn - b1.totalOut, nf2 = b2.totalIn - b2.totalOut;
+    const nfPct1 = b1.totalIn > 0 ? (nf1 / b1.totalIn) : 0;
+    const nfPct2 = b2.totalIn > 0 ? (nf2 / b2.totalIn) : 0;
+    html += `<tr><td style="font-family:'DM Sans';font-weight:600">${name}</td>`;
+    if (single) {
+      html += `<td class="pos" style="font-weight:600">${fmt(b2.totalIn)}</td>
+               <td class="neg">${fmt(b2.totalOut)}</td>
+               <td class="${nf2>=0?'pos':'neg'}" style="font-weight:600">${fmt(nf2)}</td>
+               <td>${pct(nfPct2)}</td>
+               ${showTxCount ? `<td>${b2.txCount}</td>` : ''}
+               ${monthDataCells(arr1, arr2, cls)}`;
+    } else {
+      html += `<td class="pos">${fmt(b1.totalIn)}</td><td class="pos" style="font-weight:600">${fmt(b2.totalIn)}</td>${deltaCell(b2.totalIn,b1.totalIn)}
+               <td class="neg">${fmt(b1.totalOut)}</td><td class="neg">${fmt(b2.totalOut)}</td>${deltaCell(b2.totalOut,b1.totalOut)}
+               <td class="${nf1>=0?'pos':'neg'}">${fmt(nf1)}</td><td class="${nf2>=0?'pos':'neg'}" style="font-weight:600">${fmt(nf2)}</td>${deltaCell(nf2,nf1)}
+               <td>${pct(nfPct1)}</td><td>${pct(nfPct2)}</td>
+               ${showTxCount ? `<td>${b1.txCount + b2.txCount}</td>` : ''}
+               ${monthDataCells(arr1, arr2, cls)}`;
+    }
+    html += `</tr>`;
+  });
+
+  // Totals row
+  const TI1 = rows.reduce((s, r) => s + r.b1.totalIn, 0);
+  const TI2 = rows.reduce((s, r) => s + r.b2.totalIn, 0);
+  const TO1 = rows.reduce((s, r) => s + r.b1.totalOut, 0);
+  const TO2 = rows.reduce((s, r) => s + r.b2.totalOut, 0);
+  const TN1 = TI1 - TO1, TN2 = TI2 - TO2;
+  const TNP1 = TI1 > 0 ? TN1/TI1 : 0, TNP2 = TI2 > 0 ? TN2/TI2 : 0;
+  const TTX = rows.reduce((s, r) => s + r.b1.txCount + r.b2.txCount, 0);
+  const TotA1 = new Array(12).fill(0).map((_, i) => rows.reduce((s, r) => s + r.arr1[i], 0));
+  const TotA2 = new Array(12).fill(0).map((_, i) => rows.reduce((s, r) => s + r.arr2[i], 0));
+
+  html += `<tr class="total-row"><td>TOTAL</td>`;
+  if (single) {
+    html += `<td class="pos">${fmt(TI2)}</td><td class="neg">${fmt(TO2)}</td><td class="${TN2>=0?'pos':'neg'}">${fmt(TN2)}</td><td>${pct(TNP2)}</td>${showTxCount ? `<td>${rows.reduce((s,r)=>s+r.b2.txCount,0)}</td>` : ''}${monthDataCells(TotA1, TotA2, cls)}`;
+  } else {
+    html += `<td class="pos">${fmt(TI1)}</td><td class="pos">${fmt(TI2)}</td>${deltaCell(TI2,TI1)}
+             <td class="neg">${fmt(TO1)}</td><td class="neg">${fmt(TO2)}</td>${deltaCell(TO2,TO1)}
+             <td class="${TN1>=0?'pos':'neg'}">${fmt(TN1)}</td><td class="${TN2>=0?'pos':'neg'}">${fmt(TN2)}</td>${deltaCell(TN2,TN1)}
+             <td>${pct(TNP1)}</td><td>${pct(TNP2)}</td>
+             ${showTxCount ? `<td>${TTX}</td>` : ''}
+             ${monthDataCells(TotA1, TotA2, cls)}`;
+  }
+  html += `</tr></tbody></table></div>`;
+  container.innerHTML = html;
+  // Trigger search count
+  filterTableByText(container.querySelector('table').id, '');
+}
+
+function updateDistPerfTable() {
+  const view = document.getElementById('distPerfView').value;
+  const container = document.getElementById('distPerfTableWrap');
+  const y1 = compareFYs.year1, y2 = compareFYs.year2;
+  const rows = buildPerfRows(computed.distPerf, view, y1, y2, false);
+  renderPerfTable(container, 'Distributor', rows, view, y1, y2, true);
+}
+
+// ─── RM PERFORMANCE ───
+function renderRMPerf(c) {
+  let html = renderFilterBar() + `<div class="filter-row">
+    <label style="font-size:13px;color:var(--text2)">View:</label>
+    <select id="rmPerfView" onchange="updateRMPerfTable()">
+      <option value="inflow">Monthly Inflow</option>
+      <option value="outflow">Monthly Outflow</option>
+      <option value="net">Monthly Net Flow</option>
+    </select>
+  </div>`;
+  html += `<div id="rmPerfTableWrap"></div>`;
+  c.innerHTML = html;
+  updateRMPerfTable();
+}
+
+function updateRMPerfTable() {
+  const view = document.getElementById('rmPerfView').value;
+  const container = document.getElementById('rmPerfTableWrap');
+  const y1 = compareFYs.year1, y2 = compareFYs.year2;
+  const rows = buildPerfRows(computed.rmPerf, view, y1, y2, true);
+  renderPerfTable(container, 'RM Name', rows, view, y1, y2, false);
+}
+
+// ─── INIT ───
+render();
+</script>
+</body>
+</html>
